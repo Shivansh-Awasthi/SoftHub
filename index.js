@@ -1,6 +1,21 @@
 const express = require('express');
-const app = express();
-const port = 8080;
+const app = require('./app');
+const dotenv = require('dotenv');
+const connectDb = require('./db/db');
+dotenv.config();
+const port = process.env.PORT;
+
+
+//  MongoDB connection
+
+connectDb()
+    .then(() => {
+        console.log('MongoDB is connected');
+    })
+    .catch((err) => {
+        console.log(`MongoDB error ${err}`);
+        throw err;
+    })
 
 
 
