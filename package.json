@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
@@ -16,7 +16,6 @@
   "version": "1.0.0",
   "description": "a website to download all kind of applications",
   "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
