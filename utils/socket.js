@@ -12,6 +12,7 @@ const socketHandler = (server) => {
     });
 
     return io;
+
 };
 
 module.exports = socketHandler;
