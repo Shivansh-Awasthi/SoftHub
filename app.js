@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const cors = require('cors')
 const userRoutes = require('./routes/userRoutes')
+const categoryRoutes = require("./routes/categoryRoutes")
 
 
 //middlewares
@@ -23,7 +24,12 @@ app.get("/", (req, res) => {
 
 // routes
 
-app.use("/api", userRoutes)
+
+//user
+app.use("/api/user", userRoutes)
+
+//category
+app.use("/api/category", categoryRoutes)
 
 
 
