@@ -1,7 +1,5 @@
 const uploadOnCloudinary = require("../config/cloudnary")
-
-
-
+const App = require('../models/appModels')
 
 const createApp = async (req, res) => {
     const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
@@ -17,7 +15,7 @@ const createApp = async (req, res) => {
 
         // add new app
 
-        const newApp = new App({
+        const newApp = await App.create({
             title,
             description,
             platform,
@@ -28,7 +26,6 @@ const createApp = async (req, res) => {
             thumbnail: thumbnailResult.secure_url,  // Use the  secure_url from the response
             category,
         });
-        await newApp.save();
 
         res.status(201).json({
             newApp,
