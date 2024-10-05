@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors')
 const userRoutes = require('./routes/userRoutes')
 const categoryRoutes = require("./routes/categoryRoutes")
+const appRoutes = require('./routes/appRoutes')
 
 
 //middlewares
@@ -31,7 +32,8 @@ app.use("/api/user", userRoutes)
 //category
 app.use("/api/category", categoryRoutes)
 
-
+// apps
+app.use("/api/apps",)
 
 
 

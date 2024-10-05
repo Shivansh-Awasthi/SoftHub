@@ -7,3 +7,6 @@ const { createApp } = require('../controllers/appControllers');
 
 
 router.post("/create", upload.single("thumbnail"), createApp);
+
+
+module.exports = router;
