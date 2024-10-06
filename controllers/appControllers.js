@@ -2,16 +2,17 @@ const uploadOnCloudinary = require("../config/cloudnary")
 const App = require('../models/appModels')
 
 const createApp = async (req, res) => {
-    const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
+    const { title, description, platform, isPaid, price, downloadLink, size, category, gameplayVideos } = req.body;
 
     try {
 
         // upload on cloudinary
-        const thumbnailResult = await uploadOnCloudinary(req.file.path);
+        const thumbnailResult = await uploadOnCloudinary(req.files['thumbnail'][0].path);
 
         if (!thumbnailResult) {
             return res.status(500).json({ error: 'Failed to upload thumbnail' });
         }
+
 
         // add new app
 

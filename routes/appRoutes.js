@@ -6,7 +6,9 @@ const { createApp } = require('../controllers/appControllers');
 
 
 
-router.post("/create", upload.single("thumbnail"), createApp);
+router.post("/create", upload.fields([
+    { name: 'thumbnail', maxCount: 1 }
+]), createApp);
 
 
 module.exports = router;
