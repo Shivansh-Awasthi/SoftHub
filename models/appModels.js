@@ -29,10 +29,10 @@ const appSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    thumbnail: {
+    thumbnail: [{
         type: String,  // Cloudinary URL for thumbnail
         required: true
-    },
+    }],
     category: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category', required: true

@@ -8,7 +8,8 @@ const { createApp } = require('../controllers/appControllers');
 
 router.post("/create", upload.fields([
     { name: 'thumbnail', maxCount: 1 }
-]), createApp);
+])
+    , createApp);
 
 
 module.exports = router;
