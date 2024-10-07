@@ -68,10 +68,6 @@ const createApp = async (req, res) => {
         });
 
 
-        // Cleanup the uploads folder on error
-
-        cleanUpLocalFiles("./uploads");
-
         res.status(201).json({
             newApp,
             success: true
@@ -84,7 +80,9 @@ const createApp = async (req, res) => {
         })
     }
     finally {
-        // Always clean up the uploads folder after the execution
+
+        // It is used to clean up the uploads folder after the execution
+
         cleanUpLocalFiles("./uploads");
     }
 }
