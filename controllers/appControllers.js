@@ -121,11 +121,20 @@ const getAppsByCategory = async (req, res) => {
         const apps = await App.find({ category: { $in: await Category.find({ name: categoryName }).select('_id') } }).populate('category', 'name');
 
         if (apps.length === 0) {
-            return res.status(404).json({ message: "No apps found for this category", success: false });
+            return res.status(404).json({
+                message: "No apps found for this category",
+                success: false
+            });
         }
-        res.status(200).json({ apps, success: true });
+        res.status(200).json({
+            apps,
+            success: true
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error fetching apps by category: " + error, success: false });
+        res.status(500).json({
+            message: "Error fetching apps by category: " + error,
+            success: false
+        });
     }
 };
 
@@ -167,14 +176,23 @@ const updateApp = async (req, res) => {
 
         // Check if the app was found and updated
         if (!updatedApp) {
-            return res.status(404).json({ message: "App not found", success: false });
+            return res.status(404).json({
+                message: "App not found",
+                success: false
+            });
         }
 
         // Send the updated app in the response
-        res.status(200).json({ updatedApp, success: true });
+        res.status(200).json({
+            updatedApp,
+            success: true
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: "Error updating app: " + error.message, success: false });
+        res.status(500).json({
+            message: "Error updating app: " + error.message,
+            success: false
+        });
     }
 };
 
@@ -187,11 +205,20 @@ const getAppById = async (req, res) => {
     try {
         const app = await App.findById(id).populate('category', 'name'); // Populate category details
         if (!app) {
-            return res.status(404).json({ message: "App not found", success: false });
+            return res.status(404).json({
+                message: "App not found",
+                success: false
+            });
         }
-        res.status(200).json({ app, success: true });
+        res.status(200).json({
+            app,
+            success: true
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error fetching app: " + error, success: false });
+        res.status(500).json({
+            message: "Error fetching app: " + error,
+            success: false
+        });
     }
 };
 
