@@ -3,6 +3,9 @@ const App = require('../models/appModels')
 const Category = require('../models/categoryModels');
 const cleanUpLocalFiles = require('../utils/fileCleaner');
 
+
+// ---ADMIN PANEL--- Create apps
+
 const createApp = async (req, res) => {
     const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
 
@@ -48,7 +51,9 @@ const createApp = async (req, res) => {
                 }
             }
         } else {
-            return res.status(400).json({ error: 'No thumbnails uploaded' });
+            return res.status(400).json({
+                error: 'No thumbnails uploaded'
+            });
         }
 
 
@@ -88,5 +93,26 @@ const createApp = async (req, res) => {
 }
 
 
+// ---Get all Apps---
 
-module.exports = { createApp };
+// Route to get all apps
+const getAllApps = async (req, res) => {
+    try {
+        const apps = await App.find().populate('category'); // Populate category details
+        res.status(200).json({
+            apps,
+            success: true
+        });
+    } catch (error) {
+        res.status(500).json({
+            message: "Error fetching apps: " + error,
+            success: false
+        });
+    }
+};
+
+
+
+
+
+module.exports = { createApp, getAllApps };
