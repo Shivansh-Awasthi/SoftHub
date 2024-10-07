@@ -95,7 +95,6 @@ const createApp = async (req, res) => {
 
 // ---Get all Apps---
 
-// Route to get all apps
 const getAllApps = async (req, res) => {
     try {
         const apps = await App.find().populate('category'); // Populate category details
@@ -112,7 +111,27 @@ const getAllApps = async (req, res) => {
 };
 
 
+// ---Get apps by Category
+
+const getAppsByCategory = async (req, res) => {
+    const { categoryName } = req.params;
+
+    try {
+        // Fetch apps that match the category name and populate category details
+        const apps = await App.find({ category: { $in: await Category.find({ name: categoryName }).select('_id') } }).populate('category', 'name');
+
+        if (apps.length === 0) {
+            return res.status(404).json({ message: "No apps found for this category", success: false });
+        }
+        res.status(200).json({ apps, success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching apps by category: " + error, success: false });
+    }
+};
 
 
 
-module.exports = { createApp, getAllApps };
+
+
+
+module.exports = { createApp, getAllApps, getAppsByCategory };

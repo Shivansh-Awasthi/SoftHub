@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const upload = require("../middlewares/multer");
-const { createApp, getAllApps } = require('../controllers/appControllers');
+const { createApp, getAllApps, getAppsByCategory } = require('../controllers/appControllers');
 
 
 
@@ -12,6 +12,11 @@ router.post("/admin/create", upload.fields([
 
 // get all apps
 router.get("/all", getAllApps)
+
+// get all by category name
+router.get('/category/:categoryName', getAppsByCategory);
+
+
 
 
 module.exports = router;
