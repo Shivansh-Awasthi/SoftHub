@@ -1,19 +1,40 @@
 const uploadOnCloudinary = require("../config/cloudnary")
 const App = require('../models/appModels')
+const Category = require('../models/categoryModels');
 
 const createApp = async (req, res) => {
-    const { title, description, platform, isPaid, price, downloadLink, size, category, gameplayVideos } = req.body;
+    const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
 
     try {
 
 
+        //category handeling
 
-        // Upload each thumbnail to Cloudinary
+        let categoryObj;
 
+        // If the user provides a category name, check if it already exists
+        if (category) {
+            categoryObj = await Category.findOne({ name: category });
+            if (!categoryObj) {
+                // If it doesn't exist, create a new category
+                categoryObj = new Category({ name: category });
+                await categoryObj.save();
+            } else {
+                // If it exists, use the existing category
+                console.log("Category already exists. Using existing category.");
+            }
+        } else {
+            return res.status(400).json({ message: "Category is required" });
+        }
+
+
+
+        // Upload each thumbnail to Cloudinary //
 
         const thumbnailUrls = [];
 
         // Check if thumbnails were uploaded
+
         if (req.files['thumbnail']) {
 
             for (const file of req.files['thumbnail']) {
@@ -30,6 +51,7 @@ const createApp = async (req, res) => {
         }
 
 
+
         // add new app
 
         const newApp = await App.create({
@@ -41,7 +63,7 @@ const createApp = async (req, res) => {
             downloadLink,
             size,
             thumbnail: thumbnailUrls,  // Use the  secure_url from the response
-            category,
+            category: categoryObj._id
         });
 
         res.status(201).json({

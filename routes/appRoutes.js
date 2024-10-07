@@ -7,7 +7,7 @@ const { createApp } = require('../controllers/appControllers');
 
 
 router.post("/admin/create", upload.fields([
-    { name: 'thumbnail', maxCount: 10 }
+    { name: 'thumbnail', maxCount: 20 }
 ])
     , createApp);
 
