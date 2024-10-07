@@ -7,7 +7,9 @@ const createApp = async (req, res) => {
     try {
 
         // upload on cloudinary
-        const thumbnailResult = await uploadOnCloudinary(req.files['thumbnail'][0].path);
+        const thumbnailResult = await uploadOnCloudinary(req.files.thumbnail.path);
+        console.log(req.files.thumbnail);
+
 
         if (!thumbnailResult) {
             return res.status(500).json({ error: 'Failed to upload thumbnail' });
