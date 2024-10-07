@@ -1,6 +1,7 @@
 const uploadOnCloudinary = require("../config/cloudnary")
 const App = require('../models/appModels')
 const Category = require('../models/categoryModels');
+const cleanUpLocalFiles = require('../utils/fileCleaner');
 
 const createApp = async (req, res) => {
     const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
@@ -66,6 +67,11 @@ const createApp = async (req, res) => {
             category: categoryObj._id
         });
 
+
+        // Cleanup the uploads folder on error
+
+        cleanUpLocalFiles("./uploads");
+
         res.status(201).json({
             newApp,
             success: true
@@ -76,6 +82,10 @@ const createApp = async (req, res) => {
             message: "Error in adding a new app " + error,
             success: false
         })
+    }
+    finally {
+        // Always clean up the uploads folder after the execution
+        cleanUpLocalFiles("./uploads");
     }
 }
 
