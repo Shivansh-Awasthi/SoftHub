@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const upload = require("../middlewares/multer");
-const { createApp, getAllApps, getAppsByCategory, updateApp, getAppById } = require('../controllers/appControllers');
+const { createApp, getAllApps, getAppsByCategory, updateApp, getAppById, deleteApp } = require('../controllers/appControllers');
 
 
 
@@ -17,11 +17,13 @@ router.get("/all", getAllApps)
 router.get('/category/:categoryName', getAppsByCategory);
 
 // update  apps
-router.put('/edit/:appId', updateApp);
+router.put('/edit/:id', updateApp);
 
 // get single app by id
 router.get('/get/:id', getAppById);
 
+// delete app by id
+router.delete('/delete/:id', deleteApp)
 
 
 
