@@ -129,9 +129,40 @@ const getAppsByCategory = async (req, res) => {
     }
 };
 
+// ---ADMIN PANEL--- Update apps
+const updateApp = async (req, res) => {
+    const { appId } = req.params; // Assume appId is passed in the URL
+    const updates = req.body; // Assume the updates are in the request body
+
+    try {
+        const updatedApp = await App.findByIdAndUpdate(appId, updates, { new: true, runValidators: true }).populate('category');
+        if (!updatedApp) {
+            return res.status(404).json({ message: "App not found", success: false });
+        }
+        res.status(200).json({ updatedApp, success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Error updating app: " + error, success: false });
+    }
+};
+
+// get by id
+
+const getAppById = async (req, res) => {
+    const { id } = req.params; // Get the ID from the URL parameters
+
+    try {
+        const app = await App.findById(id).populate('category', 'name'); // Populate category details
+        if (!app) {
+            return res.status(404).json({ message: "App not found", success: false });
+        }
+        res.status(200).json({ app, success: true });
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching app: " + error, success: false });
+    }
+};
 
 
 
 
 
-module.exports = { createApp, getAllApps, getAppsByCategory };
+module.exports = { createApp, getAllApps, getAppsByCategory, updateApp, getAppById };
