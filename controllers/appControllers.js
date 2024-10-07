@@ -6,13 +6,27 @@ const createApp = async (req, res) => {
 
     try {
 
-        // upload on cloudinary
-        const thumbnailResult = await uploadOnCloudinary(req.files.thumbnail.path);
-        console.log(req.files.thumbnail);
 
 
-        if (!thumbnailResult) {
-            return res.status(500).json({ error: 'Failed to upload thumbnail' });
+        // Upload each thumbnail to Cloudinary
+
+
+        const thumbnailUrls = [];
+
+        // Check if thumbnails were uploaded
+        if (req.files['thumbnail']) {
+
+            for (const file of req.files['thumbnail']) {
+                const thumbnailResult = await uploadOnCloudinary(file.path); // Upload file to Cloudinary
+
+                if (thumbnailResult) {
+                    thumbnailUrls.push(thumbnailResult.secure_url); // Store the secure URL
+                } else {
+                    return res.status(500).json({ error: 'Failed to upload thumbnail to Cloudinary' });
+                }
+            }
+        } else {
+            return res.status(400).json({ error: 'No thumbnails uploaded' });
         }
 
 
@@ -26,7 +40,7 @@ const createApp = async (req, res) => {
             price,
             downloadLink,
             size,
-            thumbnail: thumbnailResult.secure_url,  // Use the  secure_url from the response
+            thumbnail: thumbnailUrls,  // Use the  secure_url from the response
             category,
         });
 

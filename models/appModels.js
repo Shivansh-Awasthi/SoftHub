@@ -15,7 +15,8 @@ const appSchema = new mongoose.Schema({
         required: true
     },
     isPaid: {
-        type: Boolean, default: false
+        type: Boolean,
+        default: false
     },
     price: {
         type: Number,
@@ -35,7 +36,8 @@ const appSchema = new mongoose.Schema({
     }],
     category: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Category', required: true
+        ref: 'Category',
+        required: true
     },
     gameplayVideos: [{
         type: String  // Cloudinary URLs for gameplay videos
