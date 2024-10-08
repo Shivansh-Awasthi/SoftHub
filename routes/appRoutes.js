@@ -16,13 +16,13 @@ router.get("/all", getAllApps)
 // get all by category name
 router.get('/category/:categoryName', getAppsByCategory);
 
-// update  apps
+// --- ADMIN PANEL --- update  apps
 router.put('/edit/:id', updateApp);
 
 // get single app by id
 router.get('/get/:id', getAppById);
 
-// delete app by id
+// --- ADMIN PANEL --- delete app by id
 router.delete('/delete/:id', deleteApp)
 
 
