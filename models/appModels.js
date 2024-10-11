@@ -11,7 +11,7 @@ const appSchema = new mongoose.Schema({
     },
     platform: {
         type: String,
-        enum: ['PC', 'Mac', 'Android'],
+        enum: ['PC', 'Mac', 'Android', 'PS4'],
         required: true
     },
     isPaid: {
