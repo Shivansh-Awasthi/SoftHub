@@ -96,10 +96,20 @@ const createApp = async (req, res) => {
 // ---Get all Apps---
 
 const getAllApps = async (req, res) => {
+    const { page = 1, limit = 48 } = req.query; // Default limit to 48
+
     try {
-        const apps = await App.find().populate('category'); // Populate category details
+        const apps = await App.find()
+            .populate('category') // Populate category details
+            .skip((page - 1) * limit) // Skip the previous pages
+            .limit(Number(limit)); // Limit the number of results
+
+        // Count total apps for pagination
+        const totalApps = await App.countDocuments();
+
         res.status(200).json({
             apps,
+            total: totalApps, // Send total number of apps for pagination
             success: true
         });
     } catch (error) {
@@ -115,10 +125,26 @@ const getAllApps = async (req, res) => {
 
 const getAppsByCategory = async (req, res) => {
     const { categoryName } = req.params;
+    const { page = 1, limit = 48 } = req.query; // Default limit to 48
 
     try {
-        // Fetch apps that match the category name and populate category details
-        const apps = await App.find({ category: { $in: await Category.find({ name: categoryName }).select('_id') } }).populate('category', 'name');
+        const category = await Category.findOne({ name: categoryName });
+        if (!category) {
+            return res.status(404).json({
+                message: "Category not found",
+                success: false
+            });
+        }
+
+        // Find apps by category, sort by createdAt (newest first), and implement pagination
+        const apps = await App.find({ category: category._id }) // Find apps by category
+            .populate('category', 'name')
+            .sort({ createdAt: -1 }) // Sorting by first new
+            .skip((page - 1) * limit)
+            .limit(Number(limit)); // Limit the number of results
+
+        // Count total apps for pagination
+        const totalApps = await App.countDocuments({ category: category._id });
 
         if (apps.length === 0) {
             return res.status(404).json({
@@ -128,6 +154,7 @@ const getAppsByCategory = async (req, res) => {
         }
         res.status(200).json({
             apps,
+            total: totalApps, // Send total number of apps for pagination
             success: true
         });
     } catch (error) {
