@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const upload = require("../middlewares/multer");
 const { createApp, getAllApps, getAppsByCategory, updateApp, getAppById, deleteApp } = require('../controllers/appControllers');
+const isAuthenticated = require('../middlewares/auth');
 
 
 
 //--- ADMIN PANEL --- create an app
-router.post("/admin/create", upload.fields([
+router.post("/admin/create", isAuthenticated, upload.fields([
     { name: 'thumbnail', maxCount: 20 }
 ]), createApp);
 
