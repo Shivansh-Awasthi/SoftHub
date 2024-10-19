@@ -85,7 +85,8 @@ const logIn = async (req, res) => {
             return res.status(200).json({
                 message: "User logged In",
                 success: true,
-                token
+                token,
+                user
             })
 
         });
