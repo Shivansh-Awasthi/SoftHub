@@ -6,50 +6,51 @@ var jwt = require('jsonwebtoken');
 
 const signUp = async (req, res) => {
     const { username, email, password } = req.body;
+
+    // Validation: Check if all required fields are present
+    if (!username || !email || !password) {
+        return res.status(400).json({
+            message: "All fields are required: username, email, and password.",
+            success: false,
+        });
+    }
+
     try {
-
-
-        // already a user
-
+        // Check if user already exists
         const user = await User.findOne({ email });
         if (user) {
             return res.status(409).json({
-                message: "User already exist go to login page",
+                message: "User already exists, go to the login page.",
                 success: false,
-            })
+            });
         }
 
-        // new user
-
+        // Create a new user
         bcrypt.genSalt(12, function (err, salt) {
             bcrypt.hash(password, salt, async function (err, hash) {
                 const newUser = await User.create({
                     username,
                     email,
                     password: hash
-                })
+                });
 
-                const token = jwt.sign({ email }, process.env.JWT_TOKEN)
+                const token = jwt.sign({ email }, process.env.JWT_TOKEN);
                 res.cookie("token", token, { httpOnly: true, secure: true });
 
                 return res.status(201).json({
                     message: "User Created",
                     success: true,
                     newUser
-                })
-
+                });
             });
         });
-
-
     } catch (error) {
         return res.status(500).json({
-            message: "Signup error " + error,
+            message: "Signup error: " + error.message,
             success: false
-        })
+        });
     }
 }
-
 
 
 //   Signin
