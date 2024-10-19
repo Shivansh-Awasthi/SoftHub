@@ -79,7 +79,7 @@ const logIn = async (req, res) => {
                 })
             };
 
-            const token = jwt.sign({ email }, process.env.JWT_TOKEN)
+            const token = jwt.sign({ email, role: user.role }, process.env.JWT_TOKEN)
             res.cookie("token", token, { httpOnly: true, secure: true });
 
             return res.status(200).json({
