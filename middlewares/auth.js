@@ -12,9 +12,16 @@ const isAuthenticated = async (req, res, next) => {
             })
         };
 
-        const data = jwt.verify(token, "string");
-        // console.log(data);
+        const data = jwt.verify(token, process.env.JWT_TOKEN);
         req.user = data;
+
+        // Check if the user has the ADMIN role
+        if (data.role !== 'ADMIN') {
+            return res.status(403).json({
+                message: "Admin access required",
+                success: false
+            });
+        }
 
         next();
 
