@@ -22,10 +22,10 @@ const appSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    downloadLink: {
+    downloadLink: [{
         type: String,
         required: true
-    },
+    }],
     size: {
         type: String,
         required: true
