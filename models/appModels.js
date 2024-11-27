@@ -30,6 +30,10 @@ const appSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    coverImg: {
+        type: String,
+        required: true
+    },
     thumbnail: [{
         type: String,  // Cloudinary URL for thumbnail
         required: true
@@ -39,8 +43,8 @@ const appSchema = new mongoose.Schema({
         ref: 'Category',
         required: true
     },
-    gameplayVideos: [{
-        type: String  // Cloudinary URLs for gameplay videos
+    announcement: [{
+        type: String
     }],
     reviews: [{
         userId: {

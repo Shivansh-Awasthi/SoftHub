@@ -7,7 +7,7 @@ const cleanUpLocalFiles = require('../utils/fileCleaner');
 // ---ADMIN PANEL--- Create apps
 
 const createApp = async (req, res) => {
-    const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
+    const { title, description, platform, isPaid, price, downloadLink, coverImg, size, category } = req.body;
 
     try {
 
@@ -67,6 +67,7 @@ const createApp = async (req, res) => {
             isPaid,
             price,
             downloadLink,
+            coverImg,
             size,
             thumbnail: thumbnailUrls,  // Use the  secure_url from the response
             category: categoryObj._id
