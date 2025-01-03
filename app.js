@@ -4,6 +4,7 @@ const cors = require('cors')
 const userRoutes = require('./routes/userRoutes')
 const categoryRoutes = require("./routes/categoryRoutes")
 const appRoutes = require('./routes/appRoutes')
+const sitemapRoutes = require('./routes/sitemapRoutes')
 const cookieParser = require('cookie-parser');
 
 
@@ -36,6 +37,9 @@ app.use("/api/category", categoryRoutes)
 
 // apps
 app.use("/api/apps", appRoutes)
+
+//sitemap
+app.use('/api', sitemapRoutes);
 
 
 
