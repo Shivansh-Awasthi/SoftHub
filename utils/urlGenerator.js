@@ -4,7 +4,7 @@ const generateSlug = (text) => {
 
 const urlGenerator = {
     // This URL is for both the game detail page and the download link
-    appUrl: (app) => `/${app._id}`,  // Using app._id for both game details and download
+    appUrl: (app) => `/download/${generateSlug(app.platform)}/${generateSlug(app.title)}/${app._id}`,  // Corrected concatenation
 
     // Category URL (if needed)
     categoryUrl: (category) => `/category/${generateSlug(category.name)}`
