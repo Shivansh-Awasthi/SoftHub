@@ -22,6 +22,7 @@ const generateSitemap = async (baseUrl) => {
 
         staticRoutes.forEach(route => sitemapStream.write(route));
 
+
         // Add dynamic app routes
         const apps = await App.find().populate('category');
         apps.forEach(app => {
