@@ -39,7 +39,7 @@ app.use("/api/category", categoryRoutes)
 app.use("/api/apps", appRoutes)
 
 //sitemap
-app.use('/api', sitemapRoutes);
+app.use('/', sitemapRoutes);
 
 
 
