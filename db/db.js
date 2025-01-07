@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 const connectDb = async () => {
     try {
-        const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URI}/Softhub`)
+        const connectionInstance = await mongoose.connect(`${process.env.MONGODB_URI}/SoftHub`)
         console.log(`MongDb is connected, Host is: ${connectionInstance.connection.host}`);
 
     } catch (error) {
