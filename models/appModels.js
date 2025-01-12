@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const appSchema = new mongoose.Schema({
     title: {
         type: String,
-        required: true
+        required: true,
+        index: true,
+        text: true,
     },
     description: {
         type: String,
@@ -65,5 +67,8 @@ const appSchema = new mongoose.Schema({
     timestamps: true
 }
 );
+
+// Creating index explicitly for title
+appSchema.index({ title: 'text' }); // Ensure text indexing is created
 
 module.exports = mongoose.model('App', appSchema);

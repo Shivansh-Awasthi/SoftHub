@@ -97,29 +97,39 @@ const createApp = async (req, res) => {
 // ---Get all Apps---
 
 const getAllApps = async (req, res) => {
-    const { page = 1, limit = 48 } = req.query; // Default limit to 48
+    const { page = 1, limit = 48, q = "" } = req.query; // Default search query is empty
 
     try {
-        const apps = await App.find()
-            .populate('category') // Populate category details
-            .skip((page - 1) * limit) // Skip the previous pages
-            .limit(Number(limit)); // Limit the number of results
+        let searchQuery = {};
 
-        // Count total apps for pagination
-        const totalApps = await App.countDocuments();
+        if (q) {
+            // If there's a query string, use a regex to find substrings in the title
+            // Using `i` for case-insensitive matching
+            searchQuery = { title: { $regex: q, $options: 'i' } };
+        }
+
+        const apps = await App.find(searchQuery)
+            .populate('category') // Populate category details
+            .skip((page - 1) * limit) // Pagination skip
+            .limit(Number(limit)); // Pagination limit
+
+        const totalApps = await App.countDocuments(searchQuery);
 
         res.status(200).json({
             apps,
-            total: totalApps, // Send total number of apps for pagination
+            total: totalApps,
             success: true
         });
+
     } catch (error) {
+        console.error(error);
         res.status(500).json({
-            message: "Error fetching apps: " + error,
+            message: "Error fetching apps: " + error.message,
             success: false
         });
     }
 };
+
 
 
 // ---Get apps by Category
