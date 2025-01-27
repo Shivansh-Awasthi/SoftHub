@@ -62,46 +62,85 @@ const logIn = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = await User.findOne({ email })
+        const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(404).json({
                 message: "User Not Found, go to Signup Page",
                 success: false
-            })
-        };
+            });
+        }
 
-
-        bcrypt.compare(password, user.password, function (err, result) {
-
+        bcrypt.compare(password, user.password, async function (err, result) {
             if (!result) {
                 return res.status(401).json({
                     message: "Wrong Password ",
                     success: false
-                })
-            };
+                });
+            }
 
-            const token = jwt.sign({ email, role: user.role }, process.env.JWT_TOKEN)
+            const token = jwt.sign({ email, role: user.role, userId: user._id, purchasedGames: user.purchasedGames }, process.env.JWT_TOKEN);
             res.cookie("token", token, { httpOnly: true, secure: true });
 
             return res.status(200).json({
                 message: "User logged In",
                 success: true,
                 token,
-                user
-            })
-
+                user: {
+                    username: user.username,
+                    email: user.email,
+                    userId: user._id,
+                    purchasedGames: user.purchasedGames, // Include purchased games here
+                    role: user.role
+                }
+            });
         });
 
     } catch (error) {
         return res.status(500).json({
-            message: "Signup error " + error,
+            message: "Login error " + error.message,
             success: false
-        })
+        });
     }
-
-}
-
+};
 
 
-module.exports = { signUp, logIn }
+
+const getAuthenticatedUser = async (req, res) => {
+    try {
+        // Decode token from the Authorization header
+        const token = req.headers.authorization.split(' ')[1]; // 'Bearer token'
+        const decoded = jwt.verify(token, process.env.JWT_TOKEN);
+
+        // Find the user by the ID in the token
+        const user = await User.findById(decoded.userId); // Assuming token contains userId
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found',
+                success: false
+            });
+        }
+
+        // Send user data excluding password
+        return res.status(200).json({
+            user: {
+                username: user.username,
+                email: user.email,
+                purchasedGames: user.purchasedGames,
+                role: user.role,
+            },
+            success: true
+        });
+
+    } catch (error) {
+        return res.status(401).json({
+            message: 'Unauthorized, Invalid token',
+            success: false
+        });
+    }
+};
+
+
+
+module.exports = { signUp, logIn, getAuthenticatedUser }
