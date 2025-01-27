@@ -31,7 +31,8 @@ const signUp = async (req, res) => {
                 const newUser = await User.create({
                     username,
                     email,
-                    password: hash
+                    password: hash,
+                    purchasedGames: []
                 });
 
                 const token = jwt.sign({ email }, process.env.JWT_TOKEN);

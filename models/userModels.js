@@ -20,6 +20,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: 'user'
     },
+    purchasedGames: {
+        type: [String],
+        default: [],
+    },
 },
     {
         timestamps: true
