@@ -34,7 +34,7 @@ const appSchema = new mongoose.Schema({
     },
     coverImg: {
         type: String,
-        required: true
+
     },
     thumbnail: [{
         type: String,  // Cloudinary URL for thumbnail
