@@ -50,4 +50,30 @@ const isAuthenticated = async (req, res, next) => {
     }
 };
 
-module.exports = isAuthenticated;
+
+
+// middlewares/auth.js
+const isAdmin = async (req, res, next) => {
+    try {
+        // First verify general authentication
+        await isAuthenticated(req, res, () => { });
+
+        // Then check for admin role
+        if (req.user.role !== "ADMIN") {
+            return res.status(403).json({
+                message: "Forbidden: Admin privileges required",
+                success: false
+            });
+        }
+
+        next();
+    } catch (error) {
+        return res.status(401).json({
+            message: "Authorization failed",
+            success: false
+        });
+    }
+};
+
+
+module.exports = { isAuthenticated, isAdmin };

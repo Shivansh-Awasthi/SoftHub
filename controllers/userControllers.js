@@ -143,4 +143,61 @@ const getAuthenticatedUser = async (req, res) => {
 
 
 
-module.exports = { signUp, logIn, getAuthenticatedUser }
+// In your user controller file (e.g., userController.js)
+
+const getSingleUser = async (req, res) => {
+    try {
+        // Get the token from the Authorization header
+        const token = req.headers.authorization?.split(' ')[1]; // 'Bearer token'
+
+        if (!token) {
+            return res.status(401).json({
+                message: 'No token provided',
+                success: false
+            });
+        }
+
+        // Verify the token
+        const decoded = jwt.verify(token, process.env.JWT_TOKEN);
+
+        // Find the user by ID
+        const user = await User.findById(decoded.userId);
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'User not found',
+                success: false
+            });
+        }
+
+        // Return user data (excluding sensitive information)
+        return res.status(200).json({
+            success: true,
+            user: {
+                id: user._id,
+                username: user.username,
+                email: user.email,
+                role: user.role,
+                purchasedGames: user.purchasedGames
+            }
+        });
+    } catch (error) {
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({
+                message: 'Invalid token',
+                success: false
+            });
+        }
+
+        return res.status(500).json({
+            message: 'Server error: ' + error.message,
+            success: false
+        });
+    }
+};
+
+
+
+
+
+module.exports = { signUp, logIn, getAuthenticatedUser, getSingleUser };
