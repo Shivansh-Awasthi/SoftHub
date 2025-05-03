@@ -6,6 +6,8 @@ const categoryRoutes = require("./routes/categoryRoutes")
 const appRoutes = require('./routes/appRoutes')
 const sitemapRoutes = require('./routes/sitemapRoutes')
 const cookieParser = require('cookie-parser');
+const { xAuthMiddleware } = require('./middlewares/auth');
+
 
 
 //middlewares
@@ -14,7 +16,6 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(express.json({ limit: "16kb" }))
 app.use(cookieParser());
-
 
 
 //
@@ -26,6 +27,7 @@ app.get("/", (req, res) => {
 
 
 
+
 // routes
 
 
@@ -33,10 +35,10 @@ app.get("/", (req, res) => {
 app.use("/api/user", userRoutes)
 
 //category
-app.use("/api/category", categoryRoutes)
+app.use("/api/category", xAuthMiddleware, categoryRoutes)
 
 // apps
-app.use("/api/apps", appRoutes)
+app.use("/api/apps", xAuthMiddleware, appRoutes)
 
 //sitemap
 app.use('/', sitemapRoutes);

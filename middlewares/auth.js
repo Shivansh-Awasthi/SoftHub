@@ -76,4 +76,20 @@ const isAdmin = async (req, res, next) => {
 };
 
 
-module.exports = { isAuthenticated, isAdmin };
+
+// middlewares/xAuthMiddleware.js
+const xAuthMiddleware = (req, res, next) => {
+    const expectedToken = process.env.X_AUTH_TOKEN; // Keep this in your .env
+    const requestToken = req.headers['x-auth-token'];
+
+    if (!requestToken || requestToken !== expectedToken) {
+        return res.status(403).json({ success: false, message: 'Error: 404 Page Not Found 🚬' });
+    }
+
+    next();
+};
+
+
+
+
+module.exports = { isAuthenticated, isAdmin, xAuthMiddleware };
