@@ -6,6 +6,7 @@ const categoryRoutes = require("./routes/categoryRoutes")
 const appRoutes = require('./routes/appRoutes')
 const sitemapRoutes = require('./routes/sitemapRoutes')
 const cookieParser = require('cookie-parser');
+const gameRequestRoutes = require('./routes/gameRequestRoutes');
 const { xAuthMiddleware } = require('./middlewares/auth');
 
 
@@ -42,6 +43,9 @@ app.use("/api/apps", xAuthMiddleware, appRoutes)
 
 //sitemap
 app.use('/', sitemapRoutes);
+
+// game request
+app.use('/api/requests', gameRequestRoutes);
 
 
 
