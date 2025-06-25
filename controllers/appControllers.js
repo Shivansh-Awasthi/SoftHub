@@ -4,75 +4,125 @@ const Category = require('../models/categoryModels');
 const cleanUpLocalFiles = require('../utils/fileCleaner');
 
 
-// ---ADMIN PANEL--- Create apps
+const calculateRelevanceScore = (app) => {
+    // Weighted factors (adjust these as needed)
+    const weights = {
+        rating: 0.4,
+        weeklyViews: 0.3,
+        downloads: 0.2,
+        recency: 0.1
+    };
 
+    // Calculate average rating
+    const avgRating = app.reviews.length > 0
+        ? app.reviews.reduce((sum, r) => sum + r.rating, 0) / app.reviews.length
+        : 3; // Default to 3 if no reviews
+
+    // Normalize values (0-1 range)
+    const normalizedRating = avgRating / 5;
+    const normalizedViews = Math.min(app.popularity.weeklyViews / 1000, 1);
+    const normalizedDownloads = Math.min(app.popularity.totalDownloads / 500, 1);
+
+    // Recency factor (more recent = higher score)
+    const daysOld = (Date.now() - new Date(app.sortMetrics.releaseDate).getTime()) / (1000 * 60 * 60 * 24);
+    const normalizedRecency = Math.max(0, 1 - (daysOld / 365)); // 1 = current, 0 = 1+ year old
+
+    return (
+        (weights.rating * normalizedRating) +
+        (weights.weeklyViews * normalizedViews) +
+        (weights.downloads * normalizedDownloads) +
+        (weights.recency * normalizedRecency)
+    );
+};
+
+
+// ---ADMIN PANEL--- Create apps
 const createApp = async (req, res) => {
-    const { title, description, platform, isPaid, price, downloadLink, coverImg, size, category } = req.body;
+    const {
+        title,
+        description,
+        platform,
+        architecture,
+        tags,
+        isPaid,
+        price,
+        downloadLink,
+        size,
+        category,
+        systemRequirements
+    } = req.body;
 
     try {
+        // Validate tags
+        const tagsArray = tags ? tags.split(',') : [];
+        if (tagsArray.length > 15) {
+            return res.status(400).json({
+                message: "Cannot have more than 15 tags",
+                success: false
+            });
+        }
 
-
-        //category handeling
-
+        // Category handling
         let categoryObj;
-
-        // If the user provides a category name, check if it already exists
         if (category) {
             categoryObj = await Category.findOne({ name: category });
             if (!categoryObj) {
-                // If it doesn't exist, create a new category
                 categoryObj = new Category({ name: category });
                 await categoryObj.save();
-            } else {
-                // If it exists, use the existing category
-                console.log("Category already exists. Using existing category.");
             }
         } else {
-            return res.status(400).json({ message: "Category is required" });
+            return res.status(400).json({
+                message: "Category is required",
+                success: false
+            });
         }
 
-
-
-        // Upload each thumbnail to Cloudinary //
-
+        // Upload thumbnails to Cloudinary
         const thumbnailUrls = [];
-
-        // Check if thumbnails were uploaded
-
         if (req.files['thumbnail']) {
-
             for (const file of req.files['thumbnail']) {
-                const thumbnailResult = await uploadOnCloudinary(file.path); // Upload file to Cloudinary
-
+                const thumbnailResult = await uploadOnCloudinary(file.path);
                 if (thumbnailResult) {
-                    thumbnailUrls.push(thumbnailResult.secure_url); // Store the secure URL
+                    thumbnailUrls.push(thumbnailResult.secure_url);
                 } else {
-                    return res.status(500).json({ error: 'Failed to upload thumbnail to Cloudinary' });
+                    return res.status(500).json({
+                        error: 'Failed to upload thumbnail to Cloudinary',
+                        success: false
+                    });
                 }
             }
         } else {
             return res.status(400).json({
-                error: 'No thumbnails uploaded'
+                error: 'No thumbnails uploaded',
+                success: false
             });
         }
 
+        // Upload cover image if provided
+        let coverImgUrl = "";
+        if (req.files['coverImg'] && req.files['coverImg'][0]) {
+            const coverImgResult = await uploadOnCloudinary(req.files['coverImg'][0].path);
+            if (coverImgResult) {
+                coverImgUrl = coverImgResult.secure_url;
+            }
+        }
 
-
-        // add new app
-
+        // Create new app with all fields
         const newApp = await App.create({
             title,
             description,
             platform,
+            architecture: architecture || "Native",
+            tags: tags ? tags.split(',') : [],
             isPaid,
             price,
             downloadLink,
-            coverImg,
             size,
-            thumbnail: thumbnailUrls,  // Use the  secure_url from the response
-            category: categoryObj._id
+            coverImg: coverImgUrl,
+            thumbnail: thumbnailUrls,
+            category: categoryObj._id,
+            systemRequirements: systemRequirements ? JSON.parse(systemRequirements) : {}
         });
-
 
         res.status(201).json({
             newApp,
@@ -81,39 +131,67 @@ const createApp = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({
-            message: "Error in adding a new app " + error,
+            message: "Error in adding a new app: " + error.message,
             success: false
-        })
-    }
-    finally {
-
-        // It is used to clean up the uploads folder after the execution
-
+        });
+    } finally {
         cleanUpLocalFiles("./uploads");
     }
 }
 
-
-// ---Get all Apps---
-
+// ---Get all Apps with Filtering and Sorting---
 const getAllApps = async (req, res) => {
-    const { page = 1, limit = 48, q = "" } = req.query; // Default search query is empty
+    const {
+        page = 1,
+        limit = 48,
+        q = "",
+        platform,
+        architecture,
+        tags,
+        sortBy = 'popular'
+    } = req.query;
 
     try {
-        let searchQuery = {};
+        // Build query
+        const query = {};
+        if (q) query.title = { $regex: q, $options: 'i' };
+        if (platform) query.platform = platform;
+        if (architecture) query.architecture = architecture;
+        if (tags) query.tags = { $all: tags.split(',') };
 
-        if (q) {
-            // If there's a query string, use a regex to find substrings in the title
-            // Using `i` for case-insensitive matching
-            searchQuery = { title: { $regex: q, $options: 'i' } };
+        // Build sort options
+        let sort = {};
+        switch (sortBy) {
+            case 'popular':
+                sort = { 'popularity.weeklyViews': -1 };
+                break;
+            case 'newest':
+                sort = { 'sortMetrics.releaseDate': -1 };
+                break;
+            case 'oldest':
+                sort = { 'sortMetrics.releaseDate': 1 };
+                break;
+            case 'sizeAsc':
+                sort = { 'sortMetrics.sizeValue': 1 };
+                break;
+            case 'sizeDesc':
+                sort = { 'sortMetrics.sizeValue': -1 };
+                break;
+            case 'relevance':
+                sort = { 'sortMetrics.relevanceScore': -1 };
+                break;
+            default:
+                sort = { createdAt: -1 };
         }
 
-        const apps = await App.find(searchQuery)
-            .populate('category') // Populate category details
-            .skip((page - 1) * limit) // Pagination skip
-            .limit(Number(limit)); // Pagination limit
+        // Execute query
+        const apps = await App.find(query)
+            .populate('category')
+            .sort(sort)
+            .skip((page - 1) * limit)
+            .limit(Number(limit));
 
-        const totalApps = await App.countDocuments(searchQuery);
+        const totalApps = await App.countDocuments(query);
 
         res.status(200).json({
             apps,
@@ -130,13 +208,19 @@ const getAllApps = async (req, res) => {
     }
 };
 
-
-
-// ---Get apps by Category
-
+// ---Get apps by Category with Filtering---
+// ---Get apps by Category with Filtering---
 const getAppsByCategory = async (req, res) => {
     const { categoryName } = req.params;
-    const { page = 1, limit = 48 } = req.query; // Default limit to 48
+    const {
+        page = 1,
+        limit = 48,
+        platform,
+        architecture,
+        tags,
+        sizeRange, // NEW: size range filter
+        sortBy = 'newest'
+    } = req.query;
 
     try {
         const category = await Category.findOne({ name: categoryName });
@@ -147,15 +231,79 @@ const getAppsByCategory = async (req, res) => {
             });
         }
 
-        // Find apps by category, sort by createdAt (newest first), and implement pagination
-        const apps = await App.find({ category: category._id }) // Find apps by category
-            .populate('category', 'name')
-            .sort({ createdAt: -1 }) // Sorting by first new
-            .skip((page - 1) * limit)
-            .limit(Number(limit)); // Limit the number of results
+        // Build query
+        const query = { category: category._id };
+        if (platform) query.platform = platform;
+        if (architecture) query.architecture = architecture;
+        if (tags) query.tags = { $all: tags.split(',') };
 
-        // Count total apps for pagination
-        const totalApps = await App.countDocuments({ category: category._id });
+        // NEW: Size range filtering
+        if (sizeRange) {
+            const sizeInMB = {
+                '5-10': [5 * 1024, 10 * 1024],
+                '10-20': [10 * 1024, 20 * 1024],
+                '20-40': [20 * 1024, 40 * 1024],
+                '50-80': [50 * 1024, 80 * 1024],
+                '80-100': [80 * 1024, 100 * 1024],
+                '100-150': [100 * 1024, 150 * 1024],
+                '150+': [150 * 1024, Infinity]
+            };
+
+            if (sizeInMB[sizeRange]) {
+                query['sortMetrics.sizeValue'] = {
+                    $gte: sizeInMB[sizeRange][0],
+                    $lte: sizeInMB[sizeRange][1]
+                };
+            }
+        }
+
+        // Build sort options
+        let sort = {};
+        switch (sortBy) {
+            case 'popular':
+                sort = { 'popularity.weeklyViews': -1 };
+                break;
+            case 'relevance':
+                // Calculate relevance for all apps first
+                const allApps = await App.find(query).populate('category', 'name');
+                const appsWithRelevance = allApps.map(app => ({
+                    ...app.toObject(),
+                    relevance: calculateRelevanceScore(app)
+                }));
+
+                // Sort by relevance and paginate manually
+                const sortedApps = appsWithRelevance.sort((a, b) => b.relevance - a.relevance);
+                const paginatedApps = sortedApps.slice((page - 1) * limit, page * limit);
+
+                return res.status(200).json({
+                    apps: paginatedApps,
+                    total: sortedApps.length,
+                    success: true
+                });
+            case 'newest':
+                sort = { 'sortMetrics.releaseDate': -1 };
+                break;
+            case 'oldest':
+                sort = { 'sortMetrics.releaseDate': 1 };
+                break;
+            case 'sizeAsc':
+                sort = { 'sortMetrics.sizeValue': 1 };
+                break;
+            case 'sizeDesc':
+                sort = { 'sortMetrics.sizeValue': -1 };
+                break;
+            default:
+                sort = { createdAt: -1 };
+        }
+
+        // Execute query
+        const apps = await App.find(query)
+            .populate('category', 'name')
+            .sort(sort)
+            .skip((page - 1) * limit)
+            .limit(Number(limit));
+
+        const totalApps = await App.countDocuments(query);
 
         if (apps.length === 0) {
             return res.status(404).json({
@@ -163,38 +311,52 @@ const getAppsByCategory = async (req, res) => {
                 success: false
             });
         }
+
         res.status(200).json({
             apps,
-            total: totalApps, // Send total number of apps for pagination
+            total: totalApps,
             success: true
         });
     } catch (error) {
         res.status(500).json({
-            message: "Error fetching apps by category: " + error,
+            message: "Error fetching apps by category: " + error.message,
             success: false
         });
     }
 };
 
-
 // ---ADMIN PANEL--- Update apps
-
 const updateApp = async (req, res) => {
     const { id } = req.params;
-    const { title, description, platform, isPaid, price, downloadLink, size, category } = req.body;
+    const {
+        title,
+        description,
+        platform,
+        architecture,
+        tags,
+        isPaid,
+        price,
+        downloadLink,
+        size,
+        category,
+        systemRequirements
+    } = req.body;
 
     try {
-        // Prepare the update object
+        // Prepare update data
         const updateData = {};
 
-        // Only include fields that are provided in the request
+        // Basic fields
         if (title) updateData.title = title;
         if (description) updateData.description = description;
         if (platform) updateData.platform = platform;
-        if (isPaid !== undefined) updateData.isPaid = isPaid; // Handle boolean separately
+        if (architecture) updateData.architecture = architecture;
+        if (tags) updateData.tags = tags.split(',');
+        if (isPaid !== undefined) updateData.isPaid = isPaid;
         if (price) updateData.price = price;
         if (downloadLink) updateData.downloadLink = downloadLink;
         if (size) updateData.size = size;
+        if (systemRequirements) updateData.systemRequirements = JSON.parse(systemRequirements);
 
         // Handle category
         if (category) {
@@ -206,13 +368,32 @@ const updateApp = async (req, res) => {
             updateData.category = categoryObj._id;
         }
 
-        // Update the app using findByIdAndUpdate
+        // Handle cover image update
+        if (req.files['coverImg'] && req.files['coverImg'][0]) {
+            const coverImgResult = await uploadOnCloudinary(req.files['coverImg'][0].path);
+            if (coverImgResult) {
+                updateData.coverImg = coverImgResult.secure_url;
+            }
+        }
+
+        // Handle thumbnail updates
+        if (req.files['thumbnail']) {
+            const thumbnailUrls = [];
+            for (const file of req.files['thumbnail']) {
+                const thumbnailResult = await uploadOnCloudinary(file.path);
+                if (thumbnailResult) {
+                    thumbnailUrls.push(thumbnailResult.secure_url);
+                }
+            }
+            updateData.thumbnail = thumbnailUrls;
+        }
+
+        // Update the app
         const updatedApp = await App.findByIdAndUpdate(id, updateData, {
             new: true,
             runValidators: true
         });
 
-        // Check if the app was found and updated
         if (!updatedApp) {
             return res.status(404).json({
                 message: "App not found",
@@ -220,7 +401,6 @@ const updateApp = async (req, res) => {
             });
         }
 
-        // Send the updated app in the response
         res.status(200).json({
             updatedApp,
             success: true
@@ -231,46 +411,88 @@ const updateApp = async (req, res) => {
             message: "Error updating app: " + error.message,
             success: false
         });
+    } finally {
+        cleanUpLocalFiles("./uploads");
     }
 };
 
-
-// get by id
-
+// --- Get app by ID with popularity tracking ---
 const getAppById = async (req, res) => {
-    const { id } = req.params; // Get the ID from the URL parameters
+    const { id } = req.params;
 
     try {
-        const app = await App.findById(id).populate('category', 'name'); // Populate category details
+        const app = await App.findById(id)
+            .populate('category', 'name')
+            .populate('reviews.userId', 'username avatar');
+
         if (!app) {
             return res.status(404).json({
                 message: "App not found",
                 success: false
             });
         }
+
+        // Update popularity metrics
+        const now = new Date();
+        await App.findByIdAndUpdate(id, {
+            $inc: {
+                'popularity.dailyViews': 1,
+                'popularity.weeklyViews': 1,
+                'popularity.monthlyViews': 1
+            },
+            $set: { 'popularity.lastViewed': now }
+        });
+
         res.status(200).json({
             app,
             success: true
         });
     } catch (error) {
         res.status(500).json({
-            message: "Error fetching app: " + error,
+            message: "Error fetching app: " + error.message,
             success: false
         });
     }
 };
 
+// --- Record a download ---
+const recordDownload = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const updatedApp = await App.findByIdAndUpdate(
+            id,
+            { $inc: { 'popularity.totalDownloads': 1 } },
+            { new: true }
+        );
+
+        if (!updatedApp) {
+            return res.status(404).json({
+                message: "App not found",
+                success: false
+            });
+        }
+
+        res.status(200).json({
+            message: "Download recorded",
+            totalDownloads: updatedApp.popularity.totalDownloads,
+            success: true
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            message: "Error recording download: " + error.message,
+            success: false
+        });
+    }
+};
 
 // ---ADMIN PANEL--- Delete App by id
-
 const deleteApp = async (req, res) => {
     const { id } = req.params;
 
     try {
-        // Find and delete the app by its ID
         const deletedApp = await App.findByIdAndDelete(id);
-
-        // Check if the app was found and deleted
         if (!deletedApp) {
             return res.status(404).json({
                 message: "App not found",
@@ -291,8 +513,12 @@ const deleteApp = async (req, res) => {
     }
 };
 
-
-
-
-
-module.exports = { createApp, getAllApps, getAppsByCategory, updateApp, getAppById, deleteApp };
+module.exports = {
+    createApp,
+    getAllApps,
+    getAppsByCategory,
+    updateApp,
+    getAppById,
+    deleteApp,
+    recordDownload  // Add the new function to exports
+};
