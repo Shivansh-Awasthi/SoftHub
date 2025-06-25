@@ -3,6 +3,12 @@ const App = require('../models/appModels')
 const Category = require('../models/categoryModels');
 const cleanUpLocalFiles = require('../utils/fileCleaner');
 
+// Helper function to check download permission
+const canDownload = (user, appId) => {
+    if (!user) return false;
+    return user.role === "ADMIN" ||
+        user.purchasedGames.includes(appId.toString());
+};
 
 const calculateRelevanceScore = (app) => {
     // Weighted factors (adjust these as needed)
@@ -34,7 +40,6 @@ const calculateRelevanceScore = (app) => {
         (weights.recency * normalizedRecency)
     );
 };
-
 
 // ---ADMIN PANEL--- Create apps
 const createApp = async (req, res) => {
@@ -193,8 +198,21 @@ const getAllApps = async (req, res) => {
 
         const totalApps = await App.countDocuments(query);
 
+        // Process apps to remove download links for unauthorized users
+        const processedApps = apps.map(app => {
+            const appData = app.toObject();
+
+            if (appData.isPaid) {
+                if (!canDownload(req.user, appData._id)) {
+                    delete appData.downloadLink;
+                }
+            }
+
+            return appData;
+        });
+
         res.status(200).json({
-            apps,
+            apps: processedApps,
             total: totalApps,
             success: true
         });
@@ -208,7 +226,6 @@ const getAllApps = async (req, res) => {
     }
 };
 
-// ---Get apps by Category with Filtering---
 // ---Get apps by Category with Filtering---
 const getAppsByCategory = async (req, res) => {
     const { categoryName } = req.params;
@@ -275,8 +292,18 @@ const getAppsByCategory = async (req, res) => {
                 const sortedApps = appsWithRelevance.sort((a, b) => b.relevance - a.relevance);
                 const paginatedApps = sortedApps.slice((page - 1) * limit, page * limit);
 
+                // Process apps to remove download links
+                const processedPaginatedApps = paginatedApps.map(app => {
+                    if (app.isPaid) {
+                        if (!canDownload(req.user, app._id)) {
+                            delete app.downloadLink;
+                        }
+                    }
+                    return app;
+                });
+
                 return res.status(200).json({
-                    apps: paginatedApps,
+                    apps: processedPaginatedApps,
                     total: sortedApps.length,
                     success: true
                 });
@@ -312,8 +339,21 @@ const getAppsByCategory = async (req, res) => {
             });
         }
 
+        // Process apps to remove download links
+        const processedApps = apps.map(app => {
+            const appData = app.toObject();
+
+            if (appData.isPaid) {
+                if (!canDownload(req.user, appData._id)) {
+                    delete appData.downloadLink;
+                }
+            }
+
+            return appData;
+        });
+
         res.status(200).json({
-            apps,
+            apps: processedApps,
             total: totalApps,
             success: true
         });
@@ -443,8 +483,17 @@ const getAppById = async (req, res) => {
             $set: { 'popularity.lastViewed': now }
         });
 
+        // Convert to plain object and handle download link
+        const appData = app.toObject();
+
+        if (appData.isPaid) {
+            if (!canDownload(req.user, appData._id)) {
+                delete appData.downloadLink;
+            }
+        }
+
         res.status(200).json({
-            app,
+            app: appData,
             success: true
         });
     } catch (error) {
@@ -520,5 +569,5 @@ module.exports = {
     updateApp,
     getAppById,
     deleteApp,
-    recordDownload  // Add the new function to exports
+    recordDownload
 };
