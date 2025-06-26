@@ -34,13 +34,13 @@ app.get("/", (req, res) => {
 
 
 //user
-app.use("/api/user", userRoutes)
+app.use("/api/user", xAuthMiddleware, userRoutes)
 
 //category
 app.use("/api/category", xAuthMiddleware, categoryRoutes)
 
 // apps
-app.use("/api/apps", xAuthMiddleware, authMiddleware, appRoutes)
+app.use("/api/apps", xAuthMiddleware, appRoutes)
 
 //sitemap
 app.use('/', sitemapRoutes);

@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 
-
-
 const userSchema = new mongoose.Schema({
     username: {
         type: String,
@@ -14,7 +12,7 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: true
+        // Not required for OAuth users
     },
     role: {
         type: String,
@@ -24,17 +22,22 @@ const userSchema = new mongoose.Schema({
         type: [String],
         default: [],
     },
-},
-    {
-        timestamps: true
+    avatar: {
+        type: String,
+        default: ''
+    },
+    authProvider: {
+        type: String,
+        enum: ['local', 'google', 'discord'],
+        default: 'local'
+    },
+    providerId: {
+        type: String,
+        default: null
     }
-);
-
-
-
+}, {
+    timestamps: true
+});
 
 const User = mongoose.model("User", userSchema);
-
-
-
 module.exports = User;

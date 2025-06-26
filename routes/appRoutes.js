@@ -1,31 +1,60 @@
 const express = require('express');
 const router = express.Router();
 const upload = require("../middlewares/multer");
-const { createApp, getAllApps, getAppsByCategory, updateApp, getAppById, deleteApp } = require('../controllers/appControllers');
+const {
+    createApp,
+    getAllApps,
+    getAppsByCategory,
+    updateApp,
+    getAppById,
+    deleteApp,
+    getPaidAppAccess,
+    recordDownload  // Added the new controller
+} = require('../controllers/appControllers');
 const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
+// --- ADMIN PANEL --- Create an app
+router.post("/admin/create",
+    isAuthenticated,
+    isAdmin,
+    upload.fields([
+        { name: 'coverImg', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 20 }
+    ]),
+    createApp
+);
 
-
-//--- ADMIN PANEL --- create an app
-router.post("/admin/create", isAuthenticated, isAdmin, upload.fields([
-    { name: 'thumbnail', maxCount: 20 }
-]), createApp);
-
-// get all apps
+// Get all apps
 router.get("/all", getAllApps)
 
-// get all by category name
+// Get apps by category name
 router.get('/category/:categoryName', getAppsByCategory);
 
-// --- ADMIN PANEL --- update  apps
-router.put('/edit/:id', isAuthenticated, isAdmin, updateApp);
-
-// get single app by id
+// Get single app by id
 router.get('/get/:id', getAppById);
 
-// --- ADMIN PANEL --- delete app by id
-router.delete('/delete/:id', isAuthenticated, isAdmin, deleteApp)
+// Record a download (new endpoint)
+router.post('/record-download/:id', recordDownload);
 
+// new Protected routes
+router.get('/get/:id/protected', isAuthenticated, getPaidAppAccess);
 
+// --- ADMIN PANEL --- Update app
+router.put('/edit/:id',
+    isAuthenticated,
+    isAdmin,
+    upload.fields([
+        { name: 'coverImg', maxCount: 1 },
+        { name: 'thumbnail', maxCount: 20 }
+    ]),
+    updateApp
+);
+
+// --- ADMIN PANEL --- Delete app by id
+router.delete('/delete/:id',
+    isAuthenticated,
+    isAdmin,
+    deleteApp
+);
 
 module.exports = router;

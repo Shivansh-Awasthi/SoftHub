@@ -203,13 +203,13 @@ const getAllApps = async (req, res) => {
             const appData = app.toObject();
 
             if (appData.isPaid) {
-                if (!canDownload(req.user, appData._id)) {
-                    delete appData.downloadLink;
-                }
+                // Hide paid apps completely in public route OR hide downloadLink only
+                delete appData.downloadLink;
             }
 
             return appData;
         });
+
 
         res.status(200).json({
             apps: processedApps,
@@ -344,13 +344,13 @@ const getAppsByCategory = async (req, res) => {
             const appData = app.toObject();
 
             if (appData.isPaid) {
-                if (!canDownload(req.user, appData._id)) {
-                    delete appData.downloadLink;
-                }
+                // Hide paid apps completely in public route OR hide downloadLink only
+                delete appData.downloadLink;
             }
 
             return appData;
         });
+
 
         res.status(200).json({
             apps: processedApps,
@@ -487,10 +487,9 @@ const getAppById = async (req, res) => {
         const appData = app.toObject();
 
         if (appData.isPaid) {
-            if (!canDownload(req.user, appData._id)) {
-                delete appData.downloadLink;
-            }
+            delete appData.downloadLink;
         }
+
 
         res.status(200).json({
             app: appData,
@@ -503,6 +502,55 @@ const getAppById = async (req, res) => {
         });
     }
 };
+
+
+
+const getPaidAppAccess = async (req, res) => {
+    const { id } = req.params;
+    const user = req.user;
+
+    try {
+        const app = await App.findById(id)
+            .populate('category', 'name')
+            .populate('reviews.userId', 'username avatar');
+
+        if (!app) {
+            return res.status(404).json({
+                message: "App not found",
+                success: false
+            });
+        }
+
+        // Not a paid app? Send from public route instead
+        if (!app.isPaid) {
+            return res.status(400).json({
+                message: "This app is free. Access it from the public route.",
+                success: false
+            });
+        }
+
+        const hasAccess = canDownload(user, app._id);
+        if (!hasAccess) {
+            return res.status(403).json({
+                message: "You need to purchase this app to access it.",
+                success: false
+            });
+        }
+
+        res.status(200).json({
+            app,
+            success: true
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error accessing paid app: " + error.message,
+            success: false
+        });
+    }
+};
+
+
 
 // --- Record a download ---
 const recordDownload = async (req, res) => {
@@ -569,5 +617,6 @@ module.exports = {
     updateApp,
     getAppById,
     deleteApp,
-    recordDownload
+    recordDownload,
+    getPaidAppAccess
 };
