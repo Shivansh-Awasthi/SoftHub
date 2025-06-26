@@ -16,14 +16,15 @@ const voteSchema = new mongoose.Schema({
         required: true
     }
 }, {
-    timestamps: true,
-    // Auto-delete votes after 24 hours
-    expires: 24 * 60 * 60
+    timestamps: { createdAt: true, updatedAt: false }  // Only track creation time
 });
 
-// Prevent duplicate votes
-voteSchema.index({ request: 1, user: 1 }, { unique: true });
-voteSchema.index({ request: 1, ipAddress: 1 }, { unique: true });
+// TTL index for automatic cleanup (48 hours)
+voteSchema.index({ createdAt: 1 }, { expireAfterSeconds: 172800 });  // 48 hours in seconds
+
+// Optimized indexes for daily vote checks
+voteSchema.index({ request: 1, user: 1, createdAt: 1 });
+voteSchema.index({ request: 1, ipAddress: 1, createdAt: 1 });
 
 const Vote = mongoose.model('Vote', voteSchema);
 module.exports = Vote;

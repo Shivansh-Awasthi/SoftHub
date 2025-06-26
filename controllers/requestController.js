@@ -60,6 +60,18 @@ exports.voteRequest = async (req, res) => {
         const request = await GameRequest.findById(req.params.id);
         if (!request) return res.status(404).json({ error: 'Request not found' });
 
+        // Block repeated voting on same request — forever
+        const existingVote = await Vote.findOne({
+            request: req.params.id,
+            user: req.user._id
+        });
+
+        if (existingVote) {
+            return res.status(400).json({
+                error: 'You have already voted on this request.'
+            });
+        }
+
         // Check if request is still votable
         if (request.status !== 'pending') {
             return res.status(400).json({
@@ -67,33 +79,37 @@ exports.voteRequest = async (req, res) => {
             });
         }
 
-        // Check if user has voted today
-        const lastVote = await Vote.findOne({
-            $or: [
-                { user: req.user._id },
-                { ipAddress: req.ip }
-            ],
-            createdAt: { $gte: moment().startOf('day').toDate() }
-        });
+        // Calculate UTC start of day for accurate comparisons
+        const now = new Date();
+        const startOfTodayUTC = new Date(Date.UTC(
+            now.getUTCFullYear(),
+            now.getUTCMonth(),
+            now.getUTCDate()
+        ));
 
-        if (lastVote) {
-            return res.status(429).json({
-                error: 'You can only vote once per day'
-            });
-        }
+        // Debugging logs
+        console.log(`Checking votes for user ${req.user._id} or IP ${req.ip}`);
+        console.log(`Today starts at (UTC): ${startOfTodayUTC}`);
+
+        // Check if user has voted today (UTC-based)
+
 
         // Record vote
-        await Vote.create({
+        const newVote = await Vote.create({
             request: request._id,
             user: req.user._id,
-            ipAddress: req.ip
+            ipAddress: req.ip,
+            createdAt: new Date() // Explicit UTC date
         });
+
+        console.log(`Created new vote: ${newVote._id} at ${newVote.createdAt}`);
 
         // Update request vote count
         request.votes += 1;
         request.voters.push({
             user: req.user._id,
-            ipAddress: req.ip
+            ipAddress: req.ip,
+            votedAt: new Date()
         });
         request.lastVotedAt = new Date();
 
@@ -101,7 +117,6 @@ exports.voteRequest = async (req, res) => {
         if (request.votes >= 25) {
             request.status = 'approved';
             request.approvedAt = new Date();
-            // Reset processing deadline from approval time
             request.processingDeadline = moment().add(15, 'days').toDate();
         }
 
@@ -113,6 +128,7 @@ exports.voteRequest = async (req, res) => {
             status: request.status
         });
     } catch (err) {
+        console.error('Vote error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -254,9 +270,10 @@ exports.processGame = async (req, res) => {
 exports.processRequestLifecycles = async () => {
     try {
         const now = new Date();
+        const weekAgo = moment().subtract(7, 'days').toDate();
+        const fifteenDaysAgo = moment().subtract(15, 'days').toDate();
 
         // 1. Reject pending requests that didn't get 25 votes in 7 days
-        const weekAgo = moment().subtract(7, 'days').toDate();
         await GameRequest.updateMany(
             {
                 status: 'pending',
@@ -271,17 +288,15 @@ exports.processRequestLifecycles = async () => {
         );
 
         // 2. Delete rejected requests after 7 days
-        const rejectedWeekAgo = moment().subtract(7, 'days').toDate();
         await GameRequest.updateMany(
             {
                 status: 'rejected',
-                rejectedAt: { $lt: rejectedWeekAgo }
+                rejectedAt: { $lt: weekAgo }
             },
             { status: 'deleted' }
         );
 
         // 3. Reject approved requests that weren't processed in 15 days
-        const fifteenDaysAgo = moment().subtract(15, 'days').toDate();
         await GameRequest.updateMany(
             {
                 status: 'approved',
@@ -305,6 +320,15 @@ exports.processRequestLifecycles = async () => {
                 rejectedAt: now,
                 expirationDate: moment().add(7, 'days').toDate()
             }
+        );
+
+        // 5. Delete implemented requests after 15 days
+        await GameRequest.updateMany(
+            {
+                status: 'implemented',
+                implementedAt: { $lt: fifteenDaysAgo }
+            },
+            { status: 'deleted' }
         );
 
         console.log('Request lifecycles processed successfully');
