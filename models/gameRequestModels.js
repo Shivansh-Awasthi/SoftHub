@@ -38,7 +38,7 @@ const gameRequestSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['pending', 'approved', 'rejected', 'implemented', 'deleted'],
+        enum: ['pending', 'processing', 'approved', 'rejected', 'deleted'],
         default: 'pending'
     },
     votes: {
