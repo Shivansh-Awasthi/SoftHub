@@ -37,19 +37,24 @@ const signUp = async (req, res) => {
                     avatar: generateDefaultAvatar(username)
                 });
 
-                const token = jwt.sign({ email, role: user.role, userId: user._id, purchasedGames: user.purchasedGames }, process.env.JWT_TOKEN);
+                const token = jwt.sign({
+                    email,
+                    role: newUser.role,
+                    userId: newUser._id,
+                    purchasedGames: newUser.purchasedGames,
+                    avatar: newUser.avatar
+                }, process.env.JWT_TOKEN);
 
-                res.cookie("token", token, { httpOnly: true, secure: true });
+
 
                 return res.status(201).json({
                     message: "User Created",
                     success: true,
                     user: {
-                        id: newUser._id,
+                        token,
                         username,
                         email,
                         avatar: newUser.avatar,
-                        role: newUser.role
                     }
                 });
             });
@@ -83,21 +88,17 @@ const logIn = async (req, res) => {
                 });
             }
 
-            const token = jwt.sign({ email, role: user.role, userId: user._id, purchasedGames: user.purchasedGames }, process.env.JWT_TOKEN);
+            const token = jwt.sign({ email, role: user.role, userId: user._id, purchasedGames: user.purchasedGames, avatar: user.avatar }, process.env.JWT_TOKEN);
 
-            res.cookie("token", token, { httpOnly: true, secure: true });
 
             return res.status(200).json({
                 message: "User logged In",
                 success: true,
                 token,
                 user: {
-                    id: user._id,
                     username: user.username,
                     email,
                     avatar: user.avatar,
-                    role: user.role,
-                    purchasedGames: user.purchasedGames
                 }
             });
         });
@@ -134,19 +135,19 @@ const googleLogin = async (req, res) => {
         const token = jwt.sign({
             userId: user._id,
             email,
-            role: user.role
+            role: user.role,
+            purchasedGames: user.purchasedGames
         }, process.env.JWT_TOKEN);
 
-        res.cookie("token", token, { httpOnly: true, secure: true });
+
 
         res.status(200).json({
             success: true,
+            token,
             user: {
-                id: user._id,
                 username: user.username,
                 email,
                 avatar: user.avatar,
-                role: user.role
             }
         });
     } catch (error) {
@@ -179,6 +180,7 @@ const discordLogin = async (req, res) => {
                 email,
                 avatar: avatarUrl,
                 authProvider: 'discord',
+                purchasedGames: [],
                 providerId: id
             });
         }
@@ -186,19 +188,20 @@ const discordLogin = async (req, res) => {
         const token = jwt.sign({
             userId: user._id,
             email,
-            role: user.role
+            role: user.role,
+            purchasedGames: user.purchasedGames, // ✅ add this
+            avatar: user.avatar
+
         }, process.env.JWT_TOKEN);
 
-        res.cookie("token", token, { httpOnly: true, secure: true });
 
         res.status(200).json({
             success: true,
+            token,
             user: {
-                id: user._id,
                 username: user.username,
                 email,
                 avatar: user.avatar,
-                role: user.role
             }
         });
     } catch (error) {
