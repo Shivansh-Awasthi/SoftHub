@@ -128,7 +128,7 @@ exports.getPublicRequests = async (req, res) => {
     try {
         // Get requests that are still active
         const requests = await GameRequest.find({
-            status: { $in: ['pending', 'approved'] }
+            status: { $in: ['pending', 'approved', 'processing', 'rejected'] }
         })
             .sort({ votes: -1, createdAt: -1 })
             .populate('requester', 'username')
