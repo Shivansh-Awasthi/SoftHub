@@ -443,7 +443,9 @@ const updateApp = async (req, res) => {
         downloadLink,
         size,
         category,
-        systemRequirements
+        systemRequirements,
+        gameMode, // NEW: support updating gameMode
+        releaseYear // NEW: support updating releaseYear
     } = req.body;
 
     try {
@@ -465,6 +467,10 @@ const updateApp = async (req, res) => {
             updateData['sortMetrics.sizeValue'] = parseSizeToKB(size) || 0;
         }
         if (systemRequirements) updateData.systemRequirements = JSON.parse(systemRequirements);
+
+        // Add support for new schema fields
+        if (req.body.gameMode) updateData.gameMode = req.body.gameMode;
+        if (req.body.releaseYear) updateData.releaseYear = Number(req.body.releaseYear);
 
         // Handle category
         if (category) {
