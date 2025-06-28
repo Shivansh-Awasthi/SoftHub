@@ -182,7 +182,7 @@ const getAllApps = async (req, res) => {
         sortBy = 'popular'
     } = req.query;
 
-    const { sizeLimit, startsWith } = req.query;
+    const { sizeLimit, startsWith, gameMode, releaseYear } = req.query;
 
     try {
         // Build query (excluding q for fuzzy search)
@@ -197,6 +197,14 @@ const getAllApps = async (req, res) => {
             } else {
                 query.title = { $regex: `^${startsWith}`, $options: 'i' };
             }
+        }
+        // Game mode filter
+        if (gameMode) {
+            query.gameMode = gameMode;
+        }
+        // Release year filter
+        if (releaseYear) {
+            query.releaseYear = Number(releaseYear);
         }
         // FIX: Place sizeLimit filter here so it is included in the DB query
         if (sizeLimit && sizeRangeMap[sizeLimit]) {
@@ -298,7 +306,7 @@ const getAppsByCategory = async (req, res) => {
         sortBy = 'newest'
     } = req.query;
 
-    const { sizeLimit, startsWith } = req.query;
+    const { sizeLimit, startsWith, gameMode, releaseYear } = req.query;
 
     try {
         const category = await Category.findOne({ name: categoryName });
@@ -605,8 +613,6 @@ const getPaidAppAccess = async (req, res) => {
         });
     }
 };
-
-
 
 // --- Record a download ---
 const recordDownload = async (req, res) => {

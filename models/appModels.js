@@ -146,6 +146,17 @@ const appSchema = new mongoose.Schema({
             type: Date,
             default: Date.now
         }
+    },
+    // --- NEW FIELDS ---
+    releaseYear: {
+        type: Number,
+        required: false
+    },
+    gameMode: {
+        type: String,
+        enum: ['Single Player', 'Multiplayer'],
+        default: 'Single Player',
+        required: false
     }
 }, {
     timestamps: true
