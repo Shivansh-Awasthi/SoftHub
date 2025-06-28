@@ -457,16 +457,37 @@ const updateApp = async (req, res) => {
         if (description) updateData.description = description;
         if (platform) updateData.platform = platform;
         if (architecture) updateData.architecture = architecture;
-        if (tags) updateData.tags = tags.split(',');
+        // Tags: support array or string
+        if (tags) {
+            if (Array.isArray(tags)) {
+                updateData.tags = tags;
+            } else if (typeof tags === 'string') {
+                updateData.tags = tags.split(',');
+            }
+        }
         if (isPaid !== undefined) updateData.isPaid = isPaid;
         if (price) updateData.price = price;
-        if (downloadLink) updateData.downloadLink = downloadLink;
+        // Download Links: support array or string
+        if (downloadLink) {
+            if (Array.isArray(downloadLink)) {
+                updateData.downloadLink = downloadLink;
+            } else if (typeof downloadLink === 'string') {
+                updateData.downloadLink = [downloadLink];
+            }
+        }
         if (size) {
             updateData.size = size;
-            if (!updateData.sortMetrics) updateData.sortMetrics = {};
+            // Do NOT set updateData.sortMetrics = {} here!
             updateData['sortMetrics.sizeValue'] = parseSizeToKB(size) || 0;
         }
-        if (systemRequirements) updateData.systemRequirements = JSON.parse(systemRequirements);
+        // System Requirements: support object or string
+        if (systemRequirements) {
+            if (typeof systemRequirements === 'string') {
+                updateData.systemRequirements = JSON.parse(systemRequirements);
+            } else if (typeof systemRequirements === 'object') {
+                updateData.systemRequirements = systemRequirements;
+            }
+        }
 
         // Add support for new schema fields
         if (req.body.gameMode) updateData.gameMode = req.body.gameMode;
@@ -482,16 +503,23 @@ const updateApp = async (req, res) => {
             updateData.category = categoryObj._id;
         }
 
-        // Handle cover image update
-        if (req.files['coverImg'] && req.files['coverImg'][0]) {
+        // Handle cover image update (URL or file)
+        if (typeof req.body.coverImg === 'string' && req.body.coverImg.startsWith('http')) {
+            updateData.coverImg = req.body.coverImg;
+        } else if (req.files['coverImg'] && req.files['coverImg'][0]) {
             const coverImgResult = await uploadOnCloudinary(req.files['coverImg'][0].path);
             if (coverImgResult) {
                 updateData.coverImg = coverImgResult.secure_url;
             }
         }
 
-        // Handle thumbnail updates
-        if (req.files['thumbnail']) {
+        // Handle thumbnail updates (array of URLs or files)
+        if (Array.isArray(req.body.thumbnail) && req.body.thumbnail.every(url => typeof url === 'string' && url.startsWith('http'))) {
+            updateData.thumbnail = req.body.thumbnail;
+        } else if (typeof req.body.thumbnail === 'string' && req.body.thumbnail.startsWith('http')) {
+            // Single thumbnail as string
+            updateData.thumbnail = [req.body.thumbnail];
+        } else if (req.files['thumbnail']) {
             const thumbnailUrls = [];
             for (const file of req.files['thumbnail']) {
                 const thumbnailResult = await uploadOnCloudinary(file.path);
