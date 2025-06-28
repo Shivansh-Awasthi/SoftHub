@@ -13,6 +13,7 @@ const gameRequestSchema = new mongoose.Schema({
     description: {
         type: String,
         trim: true,
+        default: `Your favourite game Request`,
         maxlength: [500, 'Description cannot exceed 500 characters']
     },
     platform: {

@@ -9,7 +9,8 @@ const appSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        required: true
+        required: true,
+        index: true
     },
     platform: {
         type: String,
