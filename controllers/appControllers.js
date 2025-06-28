@@ -275,53 +275,7 @@ const getAppsByCategory = async (req, res) => {
         }
 
         // Build sort options
-        let sort = {};
-        switch (sortBy) {
-            case 'popular':
-                sort = { 'popularity.weeklyViews': -1 };
-                break;
-            case 'relevance':
-                // Calculate relevance for all apps first
-                const allApps = await App.find(query).populate('category', 'name');
-                const appsWithRelevance = allApps.map(app => ({
-                    ...app.toObject(),
-                    relevance: calculateRelevanceScore(app)
-                }));
-
-                // Sort by relevance and paginate manually
-                const sortedApps = appsWithRelevance.sort((a, b) => b.relevance - a.relevance);
-                const paginatedApps = sortedApps.slice((page - 1) * limit, page * limit);
-
-                // Process apps to remove download links
-                const processedPaginatedApps = paginatedApps.map(app => {
-                    if (app.isPaid) {
-                        if (!canDownload(req.user, app._id)) {
-                            delete app.downloadLink;
-                        }
-                    }
-                    return app;
-                });
-
-                return res.status(200).json({
-                    apps: processedPaginatedApps,
-                    total: sortedApps.length,
-                    success: true
-                });
-            case 'newest':
-                sort = { 'sortMetrics.releaseDate': -1 };
-                break;
-            case 'oldest':
-                sort = { 'sortMetrics.releaseDate': 1 };
-                break;
-            case 'sizeAsc':
-                sort = { 'sortMetrics.sizeValue': 1 };
-                break;
-            case 'sizeDesc':
-                sort = { 'sortMetrics.sizeValue': -1 };
-                break;
-            default:
-                sort = { createdAt: -1 };
-        }
+        let sort = { createdAt: -1 }; // Always newest first
 
         // Execute query
         const apps = await App.find(query)
