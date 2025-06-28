@@ -7,6 +7,7 @@ const appRoutes = require('./routes/appRoutes')
 const sitemapRoutes = require('./routes/sitemapRoutes')
 const cookieParser = require('cookie-parser');
 const gameRequestRoutes = require('./routes/gameRequestRoutes');
+const gameRandomizerRoutes = require('./routes/gameRandomizerRoutes');
 const { xAuthMiddleware } = require('./middlewares/auth');
 const { authMiddleware } = require('./middlewares/authMiddleware');
 
@@ -14,7 +15,14 @@ const { authMiddleware } = require('./middlewares/authMiddleware');
 
 //middlewares
 
-app.use(cors());
+app.use(cors({
+    origin: [
+        'http://localhost:3000',
+        'https://toxicgames.in',
+        'http://toxicgames.in'
+    ],
+    credentials: true,
+}));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }))
 app.use(express.json({ limit: "16kb" }))
 app.use(cookieParser());
@@ -47,6 +55,9 @@ app.use('/', sitemapRoutes);
 
 // game request
 app.use('/api/requests', gameRequestRoutes);
+
+// game randomizer
+app.use('/api/random', gameRandomizerRoutes);
 
 
 
