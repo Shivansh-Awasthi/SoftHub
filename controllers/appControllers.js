@@ -43,6 +43,22 @@ const calculateRelevanceScore = (app) => {
     );
 };
 
+// Helper: size range map in KB
+const sizeRangeMap = {
+    '0-1': [0, 1 * 1024 * 1024],
+    '1-5': [1 * 1024 * 1024, 5 * 1024 * 1024],
+    '5-10': [5 * 1024 * 1024, 10 * 1024 * 1024],
+    '10-20': [10 * 1024 * 1024, 20 * 1024 * 1024],
+    '20-30': [20 * 1024 * 1024, 30 * 1024 * 1024],
+    '30-40': [30 * 1024 * 1024, 40 * 1024 * 1024],
+    '40-50': [40 * 1024 * 1024, 50 * 1024 * 1024],
+    '50-60': [50 * 1024 * 1024, 60 * 1024 * 1024],
+    '60-70': [60 * 1024 * 1024, 70 * 1024 * 1024],
+    '70-80': [70 * 1024 * 1024, 80 * 1024 * 1024],
+    '80-90': [80 * 1024 * 1024, 90 * 1024 * 1024],
+    '90+': [90 * 1024 * 1024, Infinity]
+};
+
 // ---ADMIN PANEL--- Create apps
 const createApp = async (req, res) => {
     const {
@@ -166,12 +182,21 @@ const getAllApps = async (req, res) => {
         sortBy = 'popular'
     } = req.query;
 
+    const { sizeLimit } = req.query;
+
     try {
         // Build query (excluding q for fuzzy search)
         const query = {};
         if (platform) query.platform = platform;
         if (architecture) query.architecture = architecture;
         if (tags) query.tags = { $all: tags.split(',') };
+        // FIX: Place sizeLimit filter here so it is included in the DB query
+        if (sizeLimit && sizeRangeMap[sizeLimit]) {
+            query['sortMetrics.sizeValue'] = {
+                $gte: sizeRangeMap[sizeLimit][0],
+                $lte: sizeRangeMap[sizeLimit][1]
+            };
+        }
 
         // Build sort options
         let sort = {};
@@ -265,6 +290,8 @@ const getAppsByCategory = async (req, res) => {
         sortBy = 'newest'
     } = req.query;
 
+    const { sizeLimit } = req.query;
+
     try {
         const category = await Category.findOne({ name: categoryName });
         if (!category) {
@@ -298,6 +325,14 @@ const getAppsByCategory = async (req, res) => {
                     $lte: sizeInMB[sizeRange][1]
                 };
             }
+        }
+
+        // Size limit filtering
+        if (sizeLimit && sizeRangeMap[sizeLimit]) {
+            query['sortMetrics.sizeValue'] = {
+                $gte: sizeRangeMap[sizeLimit][0],
+                $lte: sizeRangeMap[sizeLimit][1]
+            };
         }
 
         // Build sort options for category
