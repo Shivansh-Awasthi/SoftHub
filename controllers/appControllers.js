@@ -3,6 +3,7 @@ const App = require('../models/appModels')
 const Category = require('../models/categoryModels');
 const cleanUpLocalFiles = require('../utils/fileCleaner');
 const Fuse = require('fuse.js'); // Add Fuse.js for fuzzy search
+const parseSizeToKB = require('../utils/parseSizeToKB');
 
 // Helper function to check download permission
 const canDownload = (user, appId) => {
@@ -113,6 +114,8 @@ const createApp = async (req, res) => {
             }
         }
 
+        // Parse size string to KB for filtering/sorting
+        const sizeValue = parseSizeToKB(size) || 0;
         // Create new app with all fields
         const newApp = await App.create({
             title,
@@ -127,7 +130,13 @@ const createApp = async (req, res) => {
             coverImg: coverImgUrl,
             thumbnail: thumbnailUrls,
             category: categoryObj._id,
-            systemRequirements: systemRequirements ? JSON.parse(systemRequirements) : {}
+            systemRequirements: systemRequirements ? JSON.parse(systemRequirements) : {},
+            sortMetrics: {
+                ...((typeof sortMetrics === 'object' && sortMetrics) || {}),
+                sizeValue,
+                releaseDate: new Date(),
+                relevanceScore: 0 // Will be calculated later
+            },
         });
 
         res.status(201).json({
@@ -300,6 +309,12 @@ const getAppsByCategory = async (req, res) => {
             case 'relevance':
                 sort = { 'sortMetrics.relevanceScore': -1 };
                 break;
+            case 'sizeAsc':
+                sort = { 'sortMetrics.sizeValue': 1 };
+                break;
+            case 'sizeDesc':
+                sort = { 'sortMetrics.sizeValue': -1 };
+                break;
             case 'oldest':
                 sort = { 'sortMetrics.releaseDate': 1 };
                 break;
@@ -380,7 +395,11 @@ const updateApp = async (req, res) => {
         if (isPaid !== undefined) updateData.isPaid = isPaid;
         if (price) updateData.price = price;
         if (downloadLink) updateData.downloadLink = downloadLink;
-        if (size) updateData.size = size;
+        if (size) {
+            updateData.size = size;
+            if (!updateData.sortMetrics) updateData.sortMetrics = {};
+            updateData['sortMetrics.sizeValue'] = parseSizeToKB(size) || 0;
+        }
         if (systemRequirements) updateData.systemRequirements = JSON.parse(systemRequirements);
 
         // Handle category
