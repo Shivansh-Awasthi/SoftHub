@@ -72,7 +72,9 @@ const createApp = async (req, res) => {
         downloadLink,
         size,
         category,
-        systemRequirements
+        systemRequirements,
+        gameMode, // Add gameMode
+        releaseYear // Add releaseYear
     } = req.body;
 
     try {
@@ -147,6 +149,8 @@ const createApp = async (req, res) => {
             thumbnail: thumbnailUrls,
             category: categoryObj._id,
             systemRequirements: systemRequirements ? JSON.parse(systemRequirements) : {},
+            gameMode, // Add gameMode
+            releaseYear, // Add releaseYear
             sortMetrics: {
                 ...((typeof sortMetrics === 'object' && sortMetrics) || {}),
                 sizeValue,
