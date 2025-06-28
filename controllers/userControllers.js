@@ -1,4 +1,5 @@
 const User = require("../models/userModels");
+const App = require("../models/appModels");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
@@ -251,10 +252,106 @@ const getAuthenticatedUser = async (req, res) => {
     }
 };
 
+// Admin: Add a paid game to a user's purchasedGames[]
+const addPurchasedGameToUser = async (req, res) => {
+    try {
+        const { userId, gameId } = req.body;
+        if (!userId || !gameId) {
+            return res.status(400).json({ success: false, message: "userId and gameId are required" });
+        }
+        // Find the game and check if it's paid
+        const game = await App.findById(gameId);
+        if (!game) {
+            return res.status(404).json({ success: false, message: "Game not found" });
+        }
+        if (!game.isPaid) {
+            return res.status(400).json({ success: false, message: "Game is not a paid game" });
+        }
+        // Find the user
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        // Add gameId to purchasedGames if not already present
+        if (!user.purchasedGames.includes(gameId)) {
+            user.purchasedGames.push(gameId);
+            await user.save();
+        }
+        return res.status(200).json({ success: true, message: "Game added to user's purchased games" });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get a single user by ID or email
+const getSingleUser = async (req, res) => {
+    try {
+        // Support both /:id and /by-email?email=...
+        const id = req.params.id || req.query.id;
+        const email = req.query.email;
+        let user;
+        if (id) {
+            user = await User.findById(id);
+        } else if (email) {
+            user = await User.findOne({ email });
+        } else {
+            return res.status(400).json({ success: false, message: "Provide user id or email" });
+        }
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        return res.status(200).json({ success: true, user });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get all users
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await User.find().sort({ createdAt: -1 });
+        return res.status(200).json({ success: true, users });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get 10 most recent users
+const getRecentUsers = async (req, res) => {
+    try {
+        const users = await User.find().sort({ createdAt: -1 }).limit(10);
+        return res.status(200).json({ success: true, users });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get a user by username (case-insensitive)
+const getUserByName = async (req, res) => {
+    try {
+        const username = req.query.username || req.params.username;
+        if (!username) {
+            return res.status(400).json({ success: false, message: "Provide username" });
+        }
+        const user = await User.findOne({ username: { $regex: `^${username}$`, $options: 'i' } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+        return res.status(200).json({ success: true, user });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 module.exports = {
     signUp,
     logIn,
     getAuthenticatedUser,
     googleLogin,
-    discordLogin
+    discordLogin,
+    addPurchasedGameToUser,
+    getSingleUser,
+    getAllUsers,
+    getRecentUsers,
+    getUserByName
 };
