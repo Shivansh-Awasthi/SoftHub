@@ -2,6 +2,7 @@ const uploadOnCloudinary = require("../config/cloudnary")
 const App = require('../models/appModels')
 const Category = require('../models/categoryModels');
 const cleanUpLocalFiles = require('../utils/fileCleaner');
+const Fuse = require('fuse.js'); // Add Fuse.js for fuzzy search
 
 // Helper function to check download permission
 const canDownload = (user, appId) => {
@@ -157,9 +158,8 @@ const getAllApps = async (req, res) => {
     } = req.query;
 
     try {
-        // Build query
+        // Build query (excluding q for fuzzy search)
         const query = {};
-        if (q) query.title = { $regex: q, $options: 'i' };
         if (platform) query.platform = platform;
         if (architecture) query.architecture = architecture;
         if (tags) query.tags = { $all: tags.split(',') };
@@ -189,27 +189,44 @@ const getAllApps = async (req, res) => {
                 sort = { createdAt: -1 };
         }
 
-        // Execute query
-        const apps = await App.find(query)
-            .populate('category')
-            .sort(sort)
-            .skip((page - 1) * limit)
-            .limit(Number(limit));
-
-        const totalApps = await App.countDocuments(query);
+        let apps, totalApps;
+        if (q) {
+            // Fuzzy search using Fuse.js
+            // Fetch all apps matching other filters (no title filter)
+            const allApps = await App.find(query).populate('category');
+            // Set up Fuse.js options
+            const fuse = new Fuse(allApps, {
+                keys: ['title', 'tags', 'description'],
+                threshold: 0.4, // Adjust for strictness
+                minMatchCharLength: 2,
+                ignoreLocation: true,
+            });
+            // Run fuzzy search
+            const fuseResults = fuse.search(q);
+            // Get paginated results
+            const startIdx = (page - 1) * limit;
+            const endIdx = startIdx + Number(limit);
+            const pagedResults = fuseResults.slice(startIdx, endIdx).map(r => r.item);
+            apps = pagedResults;
+            totalApps = fuseResults.length;
+        } else {
+            // Normal MongoDB search (no fuzzy)
+            apps = await App.find(query)
+                .populate('category')
+                .sort(sort)
+                .skip((page - 1) * limit)
+                .limit(Number(limit));
+            totalApps = await App.countDocuments(query);
+        }
 
         // Process apps to remove download links for unauthorized users
         const processedApps = apps.map(app => {
-            const appData = app.toObject();
-
+            const appData = app.toObject ? app.toObject() : app;
             if (appData.isPaid) {
-                // Hide paid apps completely in public route OR hide downloadLink only
                 delete appData.downloadLink;
             }
-
             return appData;
         });
-
 
         res.status(200).json({
             apps: processedApps,
