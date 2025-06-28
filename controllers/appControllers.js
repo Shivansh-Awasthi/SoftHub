@@ -182,7 +182,7 @@ const getAllApps = async (req, res) => {
         sortBy = 'popular'
     } = req.query;
 
-    const { sizeLimit } = req.query;
+    const { sizeLimit, startsWith } = req.query;
 
     try {
         // Build query (excluding q for fuzzy search)
@@ -190,6 +190,14 @@ const getAllApps = async (req, res) => {
         if (platform) query.platform = platform;
         if (architecture) query.architecture = architecture;
         if (tags) query.tags = { $all: tags.split(',') };
+        // Letter/number filter
+        if (startsWith) {
+            if (startsWith === '0-9') {
+                query.title = { $regex: '^[0-9]', $options: 'i' };
+            } else {
+                query.title = { $regex: `^${startsWith}`, $options: 'i' };
+            }
+        }
         // FIX: Place sizeLimit filter here so it is included in the DB query
         if (sizeLimit && sizeRangeMap[sizeLimit]) {
             query['sortMetrics.sizeValue'] = {
@@ -290,7 +298,7 @@ const getAppsByCategory = async (req, res) => {
         sortBy = 'newest'
     } = req.query;
 
-    const { sizeLimit } = req.query;
+    const { sizeLimit, startsWith } = req.query;
 
     try {
         const category = await Category.findOne({ name: categoryName });
@@ -356,6 +364,15 @@ const getAppsByCategory = async (req, res) => {
             case 'newest':
             default:
                 sort = { 'sortMetrics.releaseDate': -1 };
+        }
+
+        // Letter/number filter
+        if (startsWith) {
+            if (startsWith === '0-9') {
+                query.title = { $regex: '^[0-9]', $options: 'i' };
+            } else {
+                query.title = { $regex: `^${startsWith}`, $options: 'i' };
+            }
         }
 
         // Execute query
