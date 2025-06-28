@@ -269,7 +269,7 @@ const getAppsByCategory = async (req, res) => {
         const query = { category: category._id };
         if (platform) query.platform = platform;
         if (architecture) query.architecture = architecture;
-        if (tags) query.tags = { $all: tags.split(',') };
+        if (tags) query.tags = { $in: tags.split(',') };
 
         // NEW: Size range filtering
         if (sizeRange) {
@@ -291,8 +291,22 @@ const getAppsByCategory = async (req, res) => {
             }
         }
 
-        // Build sort options
-        let sort = { createdAt: -1 }; // Always newest first
+        // Build sort options for category
+        let sort;
+        switch (sortBy) {
+            case 'popular':
+                sort = { 'popularity.weeklyViews': -1 };
+                break;
+            case 'relevance':
+                sort = { 'sortMetrics.relevanceScore': -1 };
+                break;
+            case 'oldest':
+                sort = { 'sortMetrics.releaseDate': 1 };
+                break;
+            case 'newest':
+            default:
+                sort = { 'sortMetrics.releaseDate': -1 };
+        }
 
         // Execute query
         const apps = await App.find(query)
