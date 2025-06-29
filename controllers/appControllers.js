@@ -326,6 +326,8 @@ const getAppsByCategory = async (req, res) => {
         if (platform) query.platform = platform;
         if (architecture) query.architecture = architecture;
         if (tags) query.tags = { $in: tags.split(',') };
+        if (releaseYear) query.releaseYear = Number(releaseYear); // ✅ filter by year
+        if (gameMode) query.gameMode = gameMode;
 
         // NEW: Size range filtering
         if (sizeRange) {
