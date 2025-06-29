@@ -154,7 +154,7 @@ const appSchema = new mongoose.Schema({
     },
     gameMode: {
         type: String,
-        enum: ['Single Player', 'Multiplayer'],
+        enum: ['Singleplayer', 'Multiplayer'],
         default: 'Single Player',
         required: false
     }
