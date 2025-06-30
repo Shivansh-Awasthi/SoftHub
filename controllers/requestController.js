@@ -290,11 +290,22 @@ exports.processRequestLifecycles = async () => {
             }
         );
 
+        const oldRejectedRequests = await GameRequest.find({
+            status: 'rejected',
+            rejectedAt: { $lt: weekAgo }
+        }, '_id');
+
+        const oldRejectedIds = oldRejectedRequests.map(req => req._id);
+
+        await Vote.deleteMany({ request: { $in: oldRejectedIds } });
+
         // 2. Delete rejected requests after 7 days
         await GameRequest.deleteMany({
             status: 'rejected',
             rejectedAt: { $lt: weekAgo }
         });
+
+
 
         // 3. Delete approved requests after 15 days
         await GameRequest.deleteMany({
