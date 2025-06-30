@@ -60,8 +60,12 @@ exports.voteRequest = async (req, res) => {
         const request = await GameRequest.findById(req.params.id);
         if (!request) return res.status(404).json({ error: 'Request not found' });
 
-        // 1. Block repeated voting on same request — forever
-        if (await Vote.findOne({ request: req.params.id, user: req.user._id })) {
+        // 1. Block repeated voting on THIS SPECIFIC REQUEST forever
+        const alreadyVotedThisRequest = request.voters.some(
+            voter => voter.user && voter.user.equals(req.user._id)
+        );
+
+        if (alreadyVotedThisRequest) {
             return res.status(400).json({ error: 'You already voted on this request' });
         }
 
@@ -77,20 +81,28 @@ exports.voteRequest = async (req, res) => {
         endOfTodayUTC.setUTCDate(endOfTodayUTC.getUTCDate() + 1);
 
         // 4. Enforce one vote per user per day (across all requests)
-        if (await Vote.exists({ user: req.user._id, createdAt: { $gte: startOfTodayUTC, $lt: endOfTodayUTC } })) {
-            return res.status(400).json({ error: 'You can only vote once per day' });
+        const todaysVote = await Vote.findOne({
+            user: req.user._id,
+            createdAt: { $gte: startOfTodayUTC, $lt: endOfTodayUTC }
+        });
+
+        if (todaysVote) {
+            return res.status(400).json({
+                error: 'You can only vote once per day',
+                // Helpful info for frontend
+                nextVoteAvailable: endOfTodayUTC.toISOString()
+            });
         }
 
-        // 5. Enforce IP-based restrictions (prevent multi-account abuse)
+        // 5. IP-based restrictions remain the same
         const ipVoteCount = await Vote.countDocuments({
             ipAddress: req.ip,
             createdAt: { $gte: startOfTodayUTC, $lt: endOfTodayUTC }
         });
 
-        if (ipVoteCount >= 1) { // 1 vote per IP per day
+        if (ipVoteCount >= 1) {
             return res.status(400).json({ error: 'Your network has reached its vote limit' });
         }
-
         // Record vote
         const newVote = await Vote.create({
             request: request._id,
@@ -132,6 +144,7 @@ exports.getPublicRequests = async (req, res) => {
         })
             .sort({ votes: -1, createdAt: -1 })
             .populate('requester', 'username')
+            .populate('voters.user', '_id') // Populate voter user IDs for frontend vote status
             .limit(50);
 
         res.json(requests);
