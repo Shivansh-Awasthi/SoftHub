@@ -21,39 +21,39 @@ const { Types } = require('mongoose');
 // });
 
 // Main controller functions
-// ... other code remains the same ...
 
+// In requestController.js
 exports.createRequest = [
     async (req, res) => {
         try {
-            // Validate Steam URL if provided
-            if (req.body.steamLink &&
-                !/^https:\/\/store\.steampowered\.com\/app\/\d+\/[a-zA-Z0-9_]+[\/]?$/.test(req.body.steamLink)) {
+            // Validate Steam URL
+            if (req.body.steamLink && !/^https:\/\/store\.steampowered\.com\/app\/\d+\/[a-zA-Z0-9_]+[\/]?$/.test(req.body.steamLink)) {
                 return res.status(400).json({ error: 'Invalid Steam URL format' });
             }
 
-            // Check for duplicate game request
+            // Escape special regex characters in title
+            const escapedTitle = req.body.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+            // Check for duplicate
             const duplicate = await GameRequest.findOne({
-                title: req.body.title,
+                title: { $regex: new RegExp(`^${escapedTitle}$`, 'i') },
                 platform: req.body.platform,
-                status: { $nin: ['rejected', 'deleted'] } // Only consider active requests
+                status: { $nin: ['rejected', 'deleted'] }
             });
 
             if (duplicate) {
-                return res.status(409).json({ error: 'This game has already been requested' });
+                return res.status(409).json({ error: 'This game has already been requested for this platform' });
             }
 
-            // NOW check rate limit (only after successful validation)
-            const windowMs = 10 * 1000; // 10 seconds for testing
-            const key = req.user ? req.user.id : req.ip;
 
-            // MODIFIED: Only consider non-rejected requests for rate limiting
+            // Check rate limit
+            const windowMs = 10 * 1000; // 10 seconds for testing
             const recentRequest = await GameRequest.findOne({
                 $or: [
                     { requestedBy: req.user?._id },
                     { ipAddress: req.ip }
                 ],
-                status: { $nin: ['rejected', 'deleted'] }, // EXCLUDE rejected/deleted requests
+                status: { $nin: ['rejected', 'deleted'] },
                 createdAt: { $gt: new Date(Date.now() - windowMs) }
             });
 
@@ -63,7 +63,7 @@ exports.createRequest = [
                 });
             }
 
-            // Proceed with creating the request
+            // Create the request
             const newRequest = await GameRequest.create({
                 title: req.body.title,
                 platform: req.body.platform,
@@ -78,6 +78,17 @@ exports.createRequest = [
 
             res.status(201).json(newRequest);
         } catch (err) {
+            // Handle Mongoose validation errors
+            if (err.name === 'ValidationError') {
+                const errors = Object.values(err.errors).map(el => el.message);
+                return res.status(400).json({ errors });
+            }
+
+            // Handle duplicate key error
+            if (err.code === 11000) {
+                return res.status(409).json({ error: 'This game request already exists' });
+            }
+
             console.error('Create request error:', err);
             res.status(500).json({ error: 'Server error' });
         }

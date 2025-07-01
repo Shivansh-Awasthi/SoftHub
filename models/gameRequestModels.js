@@ -7,8 +7,8 @@ const gameRequestSchema = new mongoose.Schema({
         trim: true,
         maxlength: [100, 'Title cannot exceed 100 characters'],
         text: true,
-        unique: true,
-        uniqueCaseInsensitive: true
+        // unique: true,
+        // uniqueCaseInsensitive: true
     },
     description: {
         type: String,
