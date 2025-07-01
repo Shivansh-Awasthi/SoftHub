@@ -7,22 +7,23 @@ const axios = require('axios');
 const { Types } = require('mongoose');
 
 // Rate limiting middleware (1 request per week per user/IP)
-const requestLimiter = rateLimit({
-    windowMs: 7 * 24 * 60 * 60 * 1000, // 1 week
-    max: 1,
-    keyGenerator: (req) => {
-        return req.user ? req.user.id : req.ip;
-    },
-    handler: (req, res) => {
-        res.status(429).json({
-            error: 'You can only submit 1 game request per week'
-        });
-    }
-});
+// const requestLimiter = rateLimit({
+//     windowMs: 10 * 1000, // 1 week
+//     max: 1,
+//     keyGenerator: (req) => {
+//         return req.user ? req.user.id : req.ip;
+//     },
+//     handler: (req, res) => {
+//         res.status(429).json({
+//             error: 'You can only submit 1 game request per week'
+//         });
+//     }
+// });
 
 // Main controller functions
+// ... other code remains the same ...
+
 exports.createRequest = [
-    requestLimiter,
     async (req, res) => {
         try {
             // Validate Steam URL if provided
@@ -31,29 +32,59 @@ exports.createRequest = [
                 return res.status(400).json({ error: 'Invalid Steam URL format' });
             }
 
+            // Check for duplicate game request
+            const duplicate = await GameRequest.findOne({
+                title: req.body.title,
+                platform: req.body.platform,
+                status: { $nin: ['rejected', 'deleted'] } // Only consider active requests
+            });
+
+            if (duplicate) {
+                return res.status(409).json({ error: 'This game has already been requested' });
+            }
+
+            // NOW check rate limit (only after successful validation)
+            const windowMs = 10 * 1000; // 10 seconds for testing
+            const key = req.user ? req.user.id : req.ip;
+
+            // MODIFIED: Only consider non-rejected requests for rate limiting
+            const recentRequest = await GameRequest.findOne({
+                $or: [
+                    { requestedBy: req.user?._id },
+                    { ipAddress: req.ip }
+                ],
+                status: { $nin: ['rejected', 'deleted'] }, // EXCLUDE rejected/deleted requests
+                createdAt: { $gt: new Date(Date.now() - windowMs) }
+            });
+
+            if (recentRequest) {
+                return res.status(429).json({
+                    error: 'You can only submit 1 game request per week'
+                });
+            }
+
+            // Proceed with creating the request
             const newRequest = await GameRequest.create({
                 title: req.body.title,
-                description: req.body.description,
                 platform: req.body.platform,
                 steamLink: req.body.steamLink,
                 requestedBy: req.user._id,
                 ipAddress: req.ip,
                 userAgent: req.headers['user-agent'],
                 status: 'pending',
-                // Set expiration dates based on your rules
                 approvalDeadline: moment().add(7, 'days').toDate(),
                 processingDeadline: moment().add(15, 'days').toDate()
             });
 
             res.status(201).json(newRequest);
         } catch (err) {
-            if (err.name === 'DuplicateGameError') {
-                return res.status(409).json({ error: err.message });
-            }
+            console.error('Create request error:', err);
             res.status(500).json({ error: 'Server error' });
         }
     }
 ];
+
+
 
 exports.voteRequest = async (req, res) => {
     try {

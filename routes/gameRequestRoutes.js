@@ -6,14 +6,14 @@ const { validateRequest } = require('../middlewares/validateMiddleware');
 const rateLimit = require('express-rate-limit');
 
 // Rate limiting configuration
-const createRequestLimiter = rateLimit({
-    windowMs: 7 * 24 * 60 * 60 * 1000, // 1 week
-    max: 1,
-    keyGenerator: (req) => req.user ? req.user.id : req.ip,
-    message: 'You can only submit 1 game request per week',
-    standardHeaders: true,
-    legacyHeaders: false
-});
+// const createRequestLimiter = rateLimit({
+//     windowMs: 10 * 1000, // 1 week
+//     max: 1,
+//     keyGenerator: (req) => req.user ? req.user.id : req.ip,
+//     message: 'You can only submit 1 game request per week',
+//     standardHeaders: true,
+//     legacyHeaders: false
+// });
 
 const voteLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000, // 24 hours
@@ -36,7 +36,7 @@ router.get('/:id', gameRequestController.getRequestById); // Get single request 
 router.post(
     '/',
     authMiddleware, // Requires login
-    createRequestLimiter, // 1 request/week limit
+    // createRequestLimiter, // 1 request/week limit
     validateRequest, // Input validation
     gameRequestController.createRequest // Create new game request
 );
