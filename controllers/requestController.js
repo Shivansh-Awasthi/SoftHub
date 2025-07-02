@@ -47,7 +47,7 @@ exports.createRequest = [
 
 
             // Check rate limit
-            const windowMs = 10 * 1000; // 10 seconds for testing
+            const windowMs = 60 * 1000 * 60 * 24 * 7; // 1 week in milliseconds
             const recentRequest = await GameRequest.findOne({
                 $or: [
                     { requestedBy: req.user?._id },

@@ -16,7 +16,7 @@ const rateLimit = require('express-rate-limit');
 // });
 
 const voteLimiter = rateLimit({
-    windowMs: 24 * 60 * 60 * 1000, // 24 hours
+    windowMs: 1000 * 60 * 60 * 20, // 20 hours
     max: 1,
     keyGenerator: (req) => req.user ? req.user.id : req.ip,
     message: 'You can only vote once per day',
