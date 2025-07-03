@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     },
     avatar: {
         type: String,
-        default: ''
+        default: 'https://i.pinimg.com/236x/4e/a4/60/4ea4602026ae60b8d0774cfabd0bb6ce.jpg'
     },
     authProvider: {
         type: String,
