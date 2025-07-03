@@ -8,7 +8,11 @@ const { signUp,
     getAllUsers,
     getRecentUsers,
     getSingleUser,
-    getUserByName } = require('../controllers/userControllers');
+    getUserByName,
+    requestSignupOtp,
+    verifySignupOtp,
+    requestResetPassword,
+    verifyResetOtp } = require('../controllers/userControllers');
 const { isAuthenticated, isAdmin, xAuthMiddleware } = require('../middlewares/auth');
 const router = express.Router();
 
@@ -33,6 +37,11 @@ router.get('/by-username', isAdmin, getUserByName); // ?username=...
 // Admin: Get a single user by email or id
 router.get('/by-email', isAdmin, getSingleUser); // can use ?email=...
 router.get('/:id', isAdmin, getSingleUser); // can use /:id for id-based lookup
+
+router.post('/request-signup-otp', requestSignupOtp);
+router.post('/verify-signup-otp', verifySignupOtp);
+router.post('/request-reset-password', requestResetPassword);
+router.post('/verify-reset-otp', verifyResetOtp);
 
 
 

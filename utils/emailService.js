@@ -5,26 +5,25 @@ dotenv.config();
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.EMAIL_USER, // my email address
-        pass: process.env.EMAIL_PASS // my pass
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
     },
 });
 
-// Example email options
-const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: userEmail,
-    subject: 'Test Email (for payment)',
-    text: 'This is a test email sent regarding your Payment',
+/**
+ * Send an email using nodemailer
+ * @param {Object} options - { to, subject, text, html }
+ * @returns {Promise}
+ */
+const sendEmail = async (options) => {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+    };
+    return transporter.sendMail(mailOptions);
 };
-
-// Sending email
-transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-        return console.log('Error:', error);
-    }
-    console.log('Email sent:', info.response);
-});
-
 
 module.exports = sendEmail;
