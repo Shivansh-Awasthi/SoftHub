@@ -51,5 +51,10 @@ const userSchema = new mongoose.Schema({
     timestamps: true
 });
 
+// Add a method to check if user is admin or moderator
+userSchema.methods.isModOrAdmin = function() {
+    return this.role === 'admin' || this.role === 'moderator' || this.role === 'mod';
+};
+
 const User = mongoose.model("User", userSchema);
 module.exports = User;

@@ -10,6 +10,7 @@ const gameRequestRoutes = require('./routes/gameRequestRoutes');
 const gameRandomizerRoutes = require('./routes/gameRandomizerRoutes');
 const { xAuthMiddleware } = require('./middlewares/auth');
 const { authMiddleware } = require('./middlewares/authMiddleware');
+const commentRoutes = require('./routes/commentRoutes');
 
 
 
@@ -58,6 +59,9 @@ app.use('/api/requests', gameRequestRoutes);
 
 // game randomizer
 app.use('/api/random', gameRandomizerRoutes);
+
+// comments
+app.use('/api/comments', commentRoutes);
 
 
 
