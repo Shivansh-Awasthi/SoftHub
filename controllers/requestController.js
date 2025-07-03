@@ -58,8 +58,10 @@ exports.createRequest = [
             });
 
             if (recentRequest) {
+                const nextRequestAvailable = new Date(recentRequest.createdAt.getTime() + windowMs);
                 return res.status(429).json({
-                    error: 'You can only submit 1 game request per week'
+                    error: 'You can only submit 1 game request per week',
+                    nextRequestAvailable
                 });
             }
 
