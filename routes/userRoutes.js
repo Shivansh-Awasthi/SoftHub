@@ -12,7 +12,9 @@ const { signUp,
     requestSignupOtp,
     verifySignupOtp,
     requestResetPassword,
-    verifyResetOtp } = require('../controllers/userControllers');
+    verifyResetOtp,
+    updateAvatarUrl,
+    updateProfile } = require('../controllers/userControllers');
 const { isAuthenticated, isAdmin, xAuthMiddleware } = require('../middlewares/auth');
 const router = express.Router();
 
@@ -42,6 +44,11 @@ router.post('/request-signup-otp', requestSignupOtp);
 router.post('/verify-signup-otp', verifySignupOtp);
 router.post('/request-reset-password', requestResetPassword);
 router.post('/verify-reset-otp', verifyResetOtp);
+
+// Authenticated user can update their avatar URL
+router.patch('/update-avatar', isAuthenticated, updateAvatarUrl);
+// Authenticated user can update their username and/or email
+router.patch('/update-profile', isAuthenticated, updateProfile);
 
 
 

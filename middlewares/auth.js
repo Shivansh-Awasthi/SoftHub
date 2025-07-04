@@ -14,8 +14,9 @@ const isAuthenticated = async (req, res, next) => {
         }
 
         // Try to verify the token
+        let decoded;
         try {
-            const decoded = jwt.verify(token, process.env.JWT_TOKEN);
+            decoded = jwt.verify(token, process.env.JWT_TOKEN);
             req.user = decoded;  // Attach the decoded token data to the request
         } catch (error) {
             // If token is malformed or expired, return 401 Unauthorized
@@ -25,8 +26,8 @@ const isAuthenticated = async (req, res, next) => {
             });
         }
 
-        // Check if the user exists based on the decoded token (optional, only if needed)
-        const user = await User.findOne({ email: req.user.email });
+        // Use userId from token to find the user
+        const user = await User.findById(req.user.userId);
 
         if (!user) {
             return res.status(401).json({
@@ -35,8 +36,15 @@ const isAuthenticated = async (req, res, next) => {
             });
         }
 
-        // You can attach other user-related data if needed
-        req.user.purchasedGames = user.purchasedGames;
+        // Attach up-to-date user info to req.user
+        req.user = {
+            userId: user._id,
+            email: user.email,
+            username: user.username,
+            role: user.role,
+            purchasedGames: user.purchasedGames,
+            avatar: user.avatar
+        };
 
         // Proceed to the next middleware or route handler
         next();

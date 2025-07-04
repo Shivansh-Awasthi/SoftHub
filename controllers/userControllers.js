@@ -446,6 +446,80 @@ const verifyResetOtp = async (req, res) => {
     }
 };
 
+// Update user avatar URL
+const updateAvatarUrl = async (req, res) => {
+    const userId = req.user ? req.user.userId : null;
+    const { avatarUrl } = req.body;
+
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized', success: false });
+    }
+    if (!avatarUrl || typeof avatarUrl !== 'string') {
+        return res.status(400).json({ message: 'Invalid avatar URL', success: false });
+    }
+    try {
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { avatar: avatarUrl },
+            { new: true }
+        );
+        if (!user) {
+            return res.status(404).json({ message: 'User not found', success: false });
+        }
+        return res.status(200).json({
+            message: 'Avatar updated successfully',
+            success: true,
+            avatar: user.avatar
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error updating avatar: ' + error.message, success: false });
+    }
+};
+
+// Update user profile (username and email)
+const updateProfile = async (req, res) => {
+    const userId = req.user ? req.user.userId : null;
+    const { username, email } = req.body;
+
+    if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized', success: false });
+    }
+    if (!username && !email) {
+        return res.status(400).json({ message: 'No fields to update', success: false });
+    }
+    const updateFields = {};
+    if (username) updateFields.username = username;
+    if (email) updateFields.email = email;
+    try {
+        // If email is being updated, check for uniqueness
+        if (email) {
+            const existing = await User.findOne({ email });
+            if (existing && existing._id.toString() !== userId) {
+                return res.status(409).json({ message: 'Email already in use', success: false });
+            }
+        }
+        const user = await User.findByIdAndUpdate(
+            userId,
+            updateFields,
+            { new: true }
+        );
+        if (!user) {
+            return res.status(404).json({ message: 'User not found', success: false });
+        }
+        return res.status(200).json({
+            message: 'Profile updated successfully',
+            success: true,
+            user: {
+                username: user.username,
+                email: user.email,
+                avatar: user.avatar
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ message: 'Error updating profile: ' + error.message, success: false });
+    }
+};
+
 module.exports = {
     signUp,
     logIn,
@@ -461,4 +535,6 @@ module.exports = {
     verifySignupOtp,
     requestResetPassword,
     verifyResetOtp,
+    updateAvatarUrl,
+    updateProfile,
 };
