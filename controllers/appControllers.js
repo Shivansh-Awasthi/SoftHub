@@ -373,11 +373,11 @@ const getAppsByCategory = async (req, res) => {
                 sort = { 'sortMetrics.sizeValue': -1 };
                 break;
             case 'oldest':
-                sort = { 'sortMetrics.releaseDate': 1 };
+                sort = { 'sortMetrics.releaseDate': -1 };
                 break;
             case 'newest':
             default:
-                sort = { 'sortMetrics.releaseDate': -1 };
+                sort = { 'sortMetrics.releaseDate': 1 };
         }
 
         // Letter/number filter
