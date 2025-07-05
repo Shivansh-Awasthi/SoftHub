@@ -26,6 +26,44 @@ const { Types } = require('mongoose');
 exports.createRequest = [
     async (req, res) => {
         try {
+            // ===== SPECIAL HANDLING FOR DUMMY REQUESTS =====
+            const isDummyRequest = req.body.title === "dummy" &&
+                req.body.platform === "PC" &&
+                req.body.steamLink === "https://store.steampowered.com/app/1/Dummy/";
+
+            if (isDummyRequest) {
+                // Only check rate limit without creating a real request
+                const windowMs = 60 * 1000 * 60 * 24 * 7; // 1 week
+                const recentRequest = await GameRequest.findOne({
+                    $or: [
+                        { requestedBy: req.user?._id },
+                        { ipAddress: req.ip }
+                    ],
+                    status: { $nin: ['rejected', 'deleted'] },
+                    createdAt: { $gt: new Date(Date.now() - windowMs) }
+                });
+
+                if (recentRequest) {
+                    return res.status(429).json({
+                        error: 'You can only submit 1 game request per week',
+                        nextRequestAvailable: new Date(recentRequest.createdAt.getTime() + windowMs)
+                    });
+                } else {
+                    // Return success without creating a request
+                    return res.status(200).json({
+                        dummyCheck: true,
+                        available: true,
+                        message: 'Dummy request check successful - you have requests available'
+                    });
+                }
+            }
+            // ===== END DUMMY HANDLING =====
+
+            // Block real requests with "dummy" title
+            if (req.body.title.toLowerCase().trim() === "dummy") {
+                return res.status(400).json({ error: 'Invalid game title' });
+            }
+
             // Validate Steam URL
             if (req.body.steamLink && !/^https:\/\/store\.steampowered\.com\/app\/\d+\/[a-zA-Z0-9_]+[\/]?$/.test(req.body.steamLink)) {
                 return res.status(400).json({ error: 'Invalid Steam URL format' });
@@ -45,8 +83,7 @@ exports.createRequest = [
                 return res.status(409).json({ error: 'This game has already been requested for this platform' });
             }
 
-
-            // Check rate limit
+            // Check rate limit for real requests
             const windowMs = 60 * 1000 * 60 * 24 * 7; // 1 week in milliseconds
             const recentRequest = await GameRequest.findOne({
                 $or: [
