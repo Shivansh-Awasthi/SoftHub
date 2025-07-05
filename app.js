@@ -55,13 +55,13 @@ app.use("/api/apps", xAuthMiddleware, appRoutes)
 app.use('/', sitemapRoutes);
 
 // game request
-app.use('/api/requests', gameRequestRoutes);
+app.use('/api/requests', xAuthMiddleware, gameRequestRoutes);
 
 // game randomizer
-app.use('/api/random', gameRandomizerRoutes);
+app.use('/api/random', xAuthMiddleware, gameRandomizerRoutes);
 
 // comments
-app.use('/api/comments', commentRoutes);
+app.use('/api/comments', xAuthMiddleware, commentRoutes);
 
 
 
