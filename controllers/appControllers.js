@@ -8,9 +8,10 @@ const parseSizeToKB = require('../utils/parseSizeToKB');
 // Helper function to check download permission
 const canDownload = (user, appId) => {
     if (!user) return false;
-    return user.role === "ADMIN" ||
+    return ["ADMIN", "MOD", "PREMIUM"].includes(user.role) ||
         user.purchasedGames.includes(appId.toString());
 };
+
 
 const calculateRelevanceScore = (app) => {
     // Weighted factors (adjust these as needed)
