@@ -44,6 +44,7 @@ router.post(
 router.post(
     '/:id/vote',
     authMiddleware, // Requires login
+    gameRequestController.checkNewUser, // <-- 7-day check runs BEFORE rate limiter
     voteLimiter, // 1 vote/day limit
     gameRequestController.voteRequest // Vote for a request
 );
@@ -53,6 +54,7 @@ router.post(
 // ===========================================
 router.get(
     '/admin/requests',
+    gameRequestController.checkNewUser,
     authMiddleware,
     adminMiddleware, // Requires admin role
     gameRequestController.getAllRequests // Get all requests (admin view)
