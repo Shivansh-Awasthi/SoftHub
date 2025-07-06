@@ -63,8 +63,6 @@ exports.createRequest = [
             const windowMs1 = 1000 * 60 * 60 * 24 * 7;
             if (user && user.createdAt && (Date.now() - user.createdAt) < windowMs1) {
                 const daysLeft = Math.ceil((windowMs1 - (Date.now() - user.createdAt)) / (1000 * 60 * 60 * 24));
-                console.log(`Blocked new user from requesting: userId=${req.user._id}, createdAt=${user.createdAt}, daysLeft=${daysLeft}`);
-                console.log(user.createdAt);
                 return res.status(403).json({
                     error: 'Your account must be at least 7 days old to request games.',
                     newUser: true,
@@ -272,7 +270,6 @@ exports.voteRequest = async (req, res) => {
             dailyVotesLeft: 0 // User has no votes left for the day
         });
     } catch (err) {
-        console.error('Vote error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
@@ -466,7 +463,7 @@ exports.processRequestLifecycles = async () => {
         console.log('Request lifecycles processed successfully');
         return { success: true, processed: true };
     } catch (err) {
-        console.error('Error processing request lifecycles:', err);
+        ;
         return { success: false, error: err.message };
     }
 };
