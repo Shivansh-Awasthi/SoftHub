@@ -24,7 +24,7 @@ const authMiddleware = async (req, res, next) => {
 };
 
 const adminMiddleware = (req, res, next) => {
-    if (req.user && req.user.role === 'ADMIN') {
+    if (req.user || req.user.role === 'ADMIN') {
         next();
     } else {
         res.status(403).json({ error: 'Admin access required' });
