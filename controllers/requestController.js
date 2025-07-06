@@ -554,3 +554,20 @@ exports.getVotingStats = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
+
+// DELETE a game request and all related votes
+exports.deleteRequest = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        // Remove the GameRequest
+        const deletedRequest = await GameRequest.findByIdAndDelete(requestId);
+        if (!deletedRequest) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+        // Remove all votes for this request
+        await Vote.deleteMany({ request: requestId });
+        res.json({ message: 'Request and all related votes deleted successfully.' });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+};

@@ -54,7 +54,6 @@ router.post(
 // ===========================================
 router.get(
     '/admin/requests',
-    gameRequestController.checkNewUser,
     authMiddleware,
     adminMiddleware, // Requires admin role
     gameRequestController.getAllRequests // Get all requests (admin view)
@@ -86,6 +85,13 @@ router.get(
     authMiddleware,
     adminMiddleware,
     gameRequestController.getVotingStats // Get voting statistics
+);
+
+router.delete('/requests/:id',
+    authMiddleware,
+    adminMiddleware,
+    gameRequestController.deleteRequest // Delete a request
+
 );
 
 module.exports = router;
