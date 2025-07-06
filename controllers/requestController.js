@@ -184,87 +184,80 @@ exports.createRequest = [
 
 exports.voteRequest = async (req, res) => {
     try {
-        const userId = req.user._id;
 
-        // ✅ 1. Block new users (< 7 days old)
-        const user = await User.findById(userId).select('createdAt');
-        const minAccountAgeMs = 1000 * 60 * 60 * 24 * 7; // 7 days
-        const accountAge = Date.now() - new Date(user.createdAt).getTime();
-
-        if (accountAge < minAccountAgeMs) {
-            const daysLeft = Math.ceil((minAccountAgeMs - accountAge) / (1000 * 60 * 60 * 24));
+        // Block new users(< 7 days) from requesting
+        const user = await User.findById(req.user._id).select('createdAt');
+        const windowMs1 = 1000 * 60 * 60 * 24 * 7;
+        if (user && user.createdAt && (Date.now() - user.createdAt) < windowMs1) {
+            const daysLeft = Math.ceil((windowMs1 - (Date.now() - user.createdAt)) / (1000 * 60 * 60 * 24));
             return res.status(403).json({
-                error: 'Your account must be at least 7 days old to vote.',
+                error: 'Your account must be at least 7 days old to request games.',
                 newUser: true,
                 daysLeft
             });
         }
 
-        // ✅ 2. Find the request
+
         const request = await GameRequest.findById(req.params.id);
         if (!request) return res.status(404).json({ error: 'Request not found' });
 
-        // ✅ 3. Prevent duplicate vote on the same request
+        // 1. Block repeated voting on THIS SPECIFIC REQUEST forever
         const alreadyVotedThisRequest = request.voters.some(
-            voter => voter.user && voter.user.equals(userId)
+            voter => voter.user && voter.user.equals(req.user._id)
         );
+
         if (alreadyVotedThisRequest) {
             return res.status(400).json({ error: 'You already voted on this request' });
         }
 
-        // ✅ 4. Make sure request is still open for voting
+        // 2. Check if request is still votable
         if (request.status !== 'pending') {
             return res.status(400).json({ error: 'This request is closed for voting' });
         }
 
-        // ✅ 5. Calculate current UTC day window
+        // 3. Calculate UTC start/end of current day
         const now = new Date();
         const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         const endOfTodayUTC = new Date(startOfTodayUTC);
         endOfTodayUTC.setUTCDate(endOfTodayUTC.getUTCDate() + 1);
 
-        // ✅ 6. Check if user has already voted today
+        // 4. Enforce one vote per user per day (across all requests)
         const todaysVote = await Vote.findOne({
-            user: userId,
+            user: req.user._id,
             createdAt: { $gte: startOfTodayUTC, $lt: endOfTodayUTC }
         });
 
         if (todaysVote) {
             return res.status(400).json({
                 error: 'You can only vote once per day',
+                // Helpful info for frontend
                 nextVoteAvailable: endOfTodayUTC.toISOString()
             });
         }
 
-        // ✅ 7. IP-based vote limit
+        // 5. IP-based restrictions remain the same
         const ipVoteCount = await Vote.countDocuments({
             ipAddress: req.ip,
             createdAt: { $gte: startOfTodayUTC, $lt: endOfTodayUTC }
         });
 
         if (ipVoteCount >= 1) {
-            return res.status(400).json({
-                error: 'Your network has reached its vote limit'
-            });
+            return res.status(400).json({ error: 'Your network has reached its vote limit' });
         }
-
-        // ✅ 8. All checks passed — now create the vote
+        // Record vote
         const newVote = await Vote.create({
             request: request._id,
-            user: userId,
-            ipAddress: req.ip
+            user: req.user._id,
+            ipAddress: req.ip,
+            createdAt: new Date()
         });
 
-        // ✅ 9. Update request with new vote
+        // Update request
         request.votes += 1;
-        request.voters.push({
-            user: userId,
-            ipAddress: req.ip,
-            votedAt: new Date()
-        });
+        request.voters.push({ user: req.user._id, ipAddress: req.ip, votedAt: new Date() });
         request.lastVotedAt = new Date();
 
-        // ✅ 10. Promote to "processing" at 20 votes
+        // Promote to processing at 20 votes
         if (request.votes >= 20) {
             request.status = 'processing';
             request.processingDeadline = moment().add(15, 'days').toDate();
@@ -272,18 +265,18 @@ exports.voteRequest = async (req, res) => {
 
         await request.save();
 
-        return res.json({
+        res.json({
             message: 'Vote recorded',
             votes: request.votes,
             status: request.status,
-            dailyVotesLeft: 0
+            dailyVotesLeft: 0 // User has no votes left for the day
         });
-
     } catch (err) {
         console.error('Vote error:', err);
         res.status(500).json({ error: 'Server error' });
     }
 };
+
 
 
 
