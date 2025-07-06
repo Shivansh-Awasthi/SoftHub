@@ -46,4 +46,12 @@ const premiumUserMiddleware = (req, res, next) => {
     }
 };
 
-module.exports = { authMiddleware, adminMiddleware, modMiddleware, premiumUserMiddleware };
+const modOrAdminMiddleware = (req, res, next) => {
+    if (req.user && (req.user.role === 'MOD' || req.user.role === 'ADMIN')) {
+        next();
+    } else {
+        res.status(403).json({ error: 'Moderator or Admin access required' });
+    }
+};
+
+module.exports = { authMiddleware, adminMiddleware, modMiddleware, premiumUserMiddleware, modOrAdminMiddleware };

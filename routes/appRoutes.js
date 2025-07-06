@@ -12,7 +12,7 @@ const {
     recordDownload  // Added the new controller
 } = require('../controllers/appControllers');
 const { isAuthenticated, isAdmin } = require('../middlewares/auth');
-const { modMiddleware } = require('../middlewares/authMiddleware');
+const { modOrAdminMiddleware } = require('../middlewares/authMiddleware');
 
 // --- ADMIN PANEL --- Create an app
 router.post("/admin/create",
@@ -43,8 +43,7 @@ router.get('/get/:id/protected', isAuthenticated, getPaidAppAccess);
 // --- ADMIN PANEL --- Update app
 router.put('/edit/:id',
     isAuthenticated,
-    modMiddleware,
-    isAdmin,
+    modOrAdminMiddleware,
     upload.fields([
         { name: 'coverImg', maxCount: 1 },
         { name: 'thumbnail', maxCount: 20 }
