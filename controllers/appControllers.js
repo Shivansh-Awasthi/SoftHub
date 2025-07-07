@@ -80,7 +80,12 @@ const createApp = async (req, res) => {
 
     try {
         // Validate tags
-        const tagsArray = tags ? tags.split(',') : [];
+        let tagsArray = [];
+        if (Array.isArray(tags)) {
+            tagsArray = tags.map(t => String(t).trim()).filter(Boolean);
+        } else if (typeof tags === 'string') {
+            tagsArray = tags.split(',').map(t => t.trim()).filter(Boolean);
+        }
         if (tagsArray.length > 15) {
             return res.status(400).json({
                 message: "Cannot have more than 15 tags",
@@ -141,7 +146,7 @@ const createApp = async (req, res) => {
             description,
             platform,
             architecture: architecture || "Native",
-            tags: tags ? tags.split(',') : [],
+            tags: tagsArray,
             isPaid,
             price,
             downloadLink,

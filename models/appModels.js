@@ -25,16 +25,16 @@ const appSchema = new mongoose.Schema({
         required: true
     },
     // New: Tags for categorization
-    tags: [{
-        type: String,
+    tags: {
+        type: [String],
         index: true,
         validate: {
             validator: function (tags) {
-                return tags.length <= 15; // Limit to 15 tags
+                return Array.isArray(tags) && tags.length <= 15;
             },
             message: 'Cannot have more than 15 tags'
         }
-    }],
+    },
     isPaid: {
         type: Boolean,
         default: false
