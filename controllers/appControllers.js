@@ -383,7 +383,7 @@ const getAppsByCategory = async (req, res) => {
                 break;
             case 'newest':
             default:
-                sort = { 'sortMetrics.releaseDate': 1 };
+                sort = { createdAt: -1 };
         }
 
         // Letter/number filter
