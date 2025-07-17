@@ -15,6 +15,7 @@ const commentRoutes = require('./routes/commentRoutes');
 
 
 //middlewares
+app.set('trust proxy', true);
 
 app.use(cors({
     origin: [
