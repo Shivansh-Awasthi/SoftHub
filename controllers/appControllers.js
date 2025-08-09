@@ -230,11 +230,11 @@ const getAllApps = async (req, res) => {
             case 'popular':
                 sort = { 'popularity.weeklyViews': -1 };
                 break;
-            case 'newest':
-                sort = { 'sortMetrics.releaseDate': -1 };
-                break;
             case 'oldest':
-                sort = { 'sortMetrics.releaseDate': 1 };
+                sort = { createdAt: 1 }; // Oldest first
+                break;
+            case 'newest':
+                sort = { createdAt: -1 }; // Newest first
                 break;
             case 'sizeAsc':
                 sort = { 'sortMetrics.sizeValue': 1 };
@@ -379,9 +379,11 @@ const getAppsByCategory = async (req, res) => {
                 sort = { 'sortMetrics.sizeValue': -1 };
                 break;
             case 'oldest':
-                sort = { 'sortMetrics.releaseDate': -1 };
+                sort = { createdAt: 1 }; // Oldest first
                 break;
             case 'newest':
+                sort = { createdAt: -1 }; // Newest first
+                break;
             default:
                 sort = { createdAt: -1 };
         }
