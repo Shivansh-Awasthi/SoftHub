@@ -3,7 +3,7 @@ const App = require("../models/appModels");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const axios = require('axios');
-const sendEmail = require('../utils/emailService');
+const { sendEmail, sendOTPEmail } = require('../utils/emailService');
 const crypto = require('crypto');
 
 // Generate default avatar URL
@@ -351,6 +351,7 @@ function generateOtp() {
 }
 
 // Request OTP for signup
+// Request OTP for signup
 const requestSignupOtp = async (req, res) => {
     const { email, username, password } = req.body;
     if (!email || !username || !password) {
@@ -365,7 +366,15 @@ const requestSignupOtp = async (req, res) => {
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
         if (!user) {
             // Create unverified user
-            user = await User.create({ username, email, password: await bcrypt.hash(password, 12), isVerified: false, otp, otpExpires, avatar: generateDefaultAvatar(username) });
+            user = await User.create({
+                username,
+                email,
+                password: await bcrypt.hash(password, 12),
+                isVerified: false,
+                otp,
+                otpExpires,
+                avatar: generateDefaultAvatar(username)
+            });
         } else {
             user.otp = otp;
             user.otpExpires = otpExpires;
@@ -373,14 +382,26 @@ const requestSignupOtp = async (req, res) => {
             user.password = await bcrypt.hash(password, 12);
             await user.save();
         }
-        await sendEmail({
-            to: email,
-            subject: 'Your Signup OTP',
-            text: `Your OTP for signup is: ${otp}`
+
+        // Use the new OTP email template
+        const emailResult = await sendOTPEmail(email, otp, username);
+
+        if (!emailResult.success) {
+            return res.status(500).json({
+                message: 'Failed to send OTP email: ' + emailResult.error,
+                success: false
+            });
+        }
+
+        return res.json({
+            message: 'OTP sent to email',
+            success: true
         });
-        return res.json({ message: 'OTP sent to email', success: true });
     } catch (err) {
-        return res.status(500).json({ message: 'Error: ' + err.message, success: false });
+        return res.status(500).json({
+            message: 'Error: ' + err.message,
+            success: false
+        });
     }
 };
 
@@ -406,26 +427,60 @@ const verifySignupOtp = async (req, res) => {
 };
 
 // Request OTP for password reset
+// Request OTP for password reset
 const requestResetPassword = async (req, res) => {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: 'Email required', success: false });
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email required', success: false });
+    }
+
     try {
+        // Find the user
         const user = await User.findOne({ email });
-        if (!user || !user.isVerified) return res.status(404).json({ message: 'User not found or not verified', success: false });
-        const otp = generateOtp();
+        if (!user || !user.isVerified) {
+            return res.status(404).json({ message: 'User not found or not verified', success: false });
+        }
+
+        // Generate OTP and set expiry
+        const otp = generateOtp(); // Make sure generateOtp() returns a string or number
         user.otp = otp;
-        user.otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
         await user.save();
-        await sendEmail({
-            to: email,
-            subject: 'Your Password Reset OTP',
-            text: `Your OTP for password reset is: ${otp}`
+
+        // Send OTP email with proper try/catch
+        let emailResult;
+        try {
+            await sendOTPEmail(email, otp, user.username); // your Nodemailer function
+            emailResult = { success: true };
+        } catch (error) {
+            console.error('Email send error:', error);
+            emailResult = { success: false, error: error.message };
+        }
+
+        // Check if email sending failed
+        if (!emailResult.success) {
+            return res.status(500).json({
+                message: 'Failed to send OTP email: ' + emailResult.error,
+                success: false
+            });
+        }
+
+        // Success response
+        return res.json({
+            message: 'OTP sent to email',
+            success: true
         });
-        return res.json({ message: 'OTP sent to email', success: true });
+
     } catch (err) {
-        return res.status(500).json({ message: 'Error: ' + err.message, success: false });
+        console.error('Request reset password error:', err);
+        return res.status(500).json({
+            message: 'Error: ' + err.message,
+            success: false
+        });
     }
 };
+
 
 // Verify OTP and reset password
 const verifyResetOtp = async (req, res) => {
