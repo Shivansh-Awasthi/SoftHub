@@ -45,14 +45,14 @@ const userSchema = new mongoose.Schema({
     },
     isVerified: {
         type: Boolean,
-        default: false
+        default: true
     }
 }, {
     timestamps: true
 });
 
 // Add a method to check if user is admin or moderator
-userSchema.methods.isModOrAdmin = function() {
+userSchema.methods.isModOrAdmin = function () {
     return this.role === 'admin' || this.role === 'moderator' || this.role === 'mod';
 };
 
