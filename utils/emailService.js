@@ -23,7 +23,7 @@ const transporter = nodemailer.createTransport({
  */
 const sendEmail = async (options) => {
     const mailOptions = {
-        from: process.env.EMAIL_USER,
+        from: `"ToxicGames" <${process.env.EMAIL_USER}>`,
         to: options.to,
         subject: options.subject,
         text: options.text,
