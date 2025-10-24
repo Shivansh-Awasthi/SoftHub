@@ -40,7 +40,7 @@ const isMod = (req, res, next) => {
 // Middleware to check if user is blocked from commenting
 const checkBlocked = async (req, res, next) => {
     if (!req.user) return res.status(401).json({ message: 'Authentication required.' });
-    const blocked = await CommentBlockedUser.findOne({ user: req.user._id });
+    const blocked = await CommentBlockedUser.findOne({ userId: req.user._id });
     if (blocked) {
         return res.status(403).json({ message: 'You are blocked from commenting.' });
     }

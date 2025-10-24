@@ -93,7 +93,10 @@ exports.editOwnComment = async (req, res) => {
         const { content } = req.body;
         const comment = await Comment.findById(commentId);
         if (!comment || comment.isDeleted) return res.status(404).json({ error: 'Comment not found' });
-        if (String(comment.userId) !== req.user.userId) return res.status(403).json({ error: 'Not your comment' });
+
+        // FIX: Compare ObjectIds properly
+        if (!comment.userId.equals(req.user.userId)) return res.status(403).json({ error: 'Not your comment' });
+
         comment.content = content;
         await comment.save();
         res.json({ comment });
@@ -108,7 +111,10 @@ exports.deleteOwnComment = async (req, res) => {
         const { commentId } = req.params;
         const comment = await Comment.findById(commentId);
         if (!comment || comment.isDeleted) return res.status(404).json({ error: 'Comment not found' });
-        if (String(comment.userId) !== req.user.userId) return res.status(403).json({ error: 'Not your comment' });
+
+        // FIX: Compare ObjectIds properly
+        if (!comment.userId.equals(req.user.userId)) return res.status(403).json({ error: 'Not your comment' });
+
         comment.isDeleted = true;
         await comment.save();
         // Cascade delete replies
