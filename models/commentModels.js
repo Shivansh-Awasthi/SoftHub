@@ -36,10 +36,35 @@ const commentSchema = new mongoose.Schema({
     blocked: {
         type: Boolean,
         default: false
+    },
+    // 🔥 NOTIFICATION TRACKING
+    readBy: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        readAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    isRead: {
+        type: Boolean,
+        default: false
+    },
+    // 🔥 NEW: ADMIN READ STATUS
+    adminRead: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true
 });
+
+// Index for better performance on notification queries
+commentSchema.index({ parentId: 1, createdAt: -1 });
+commentSchema.index({ userId: 1, isDeleted: 1 });
+commentSchema.index({ adminRead: 1, createdAt: -1 }); // For admin queries
 
 const Comment = mongoose.model('Comment', commentSchema);
 module.exports = Comment;
