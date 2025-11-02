@@ -9,7 +9,8 @@ const {
     getAppById,
     deleteApp,
     getPaidAppAccess,
-    recordDownload  // Added the new controller
+    getCopyrightedAppAccess, // Add this import
+    recordDownload
 } = require('../controllers/appControllers');
 const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 const { modOrAdminMiddleware } = require('../middlewares/authMiddleware');
@@ -37,8 +38,11 @@ router.get('/get/:id', getAppById);
 // Record a download (new endpoint)
 router.post('/record-download/:id', recordDownload);
 
-// new Protected routes
+// Protected routes for paid apps
 router.get('/get/:id/protected', isAuthenticated, getPaidAppAccess);
+
+// NEW: Protected route for copyrighted apps
+router.get('/get/:id/copyrighted', isAuthenticated, getCopyrightedAppAccess);
 
 // --- ADMIN PANEL --- Update app
 router.put('/edit/:id',

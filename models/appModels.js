@@ -39,6 +39,10 @@ const appSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    copyrighted: {
+        type: Boolean,
+        default: false
+    },
     price: {
         type: Number,
         default: 0

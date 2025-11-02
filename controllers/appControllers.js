@@ -6,12 +6,23 @@ const Fuse = require('fuse.js'); // Add Fuse.js for fuzzy search
 const parseSizeToKB = require('../utils/parseSizeToKB');
 
 // Helper function to check download permission
-const canDownload = (user, appId) => {
+const canDownload = (user, app) => {
     if (!user) return false;
-    return ["ADMIN", "MOD", "PREMIUM"].includes(user.role) ||
-        user.purchasedGames.includes(appId.toString());
-};
 
+    // For paid apps - check role or purchase
+    if (app.isPaid) {
+        return ["ADMIN", "MOD", "PREMIUM"].includes(user.role) ||
+            user.purchasedGames.includes(app._id.toString());
+    }
+
+    // For copyrighted apps - just check if user is authenticated
+    if (app.copyrighted) {
+        return true; // Any authenticated user can access copyrighted apps
+    }
+
+    // Free apps - anyone can access
+    return true;
+};
 
 const calculateRelevanceScore = (app) => {
     // Weighted factors (adjust these as needed)
@@ -69,13 +80,14 @@ const createApp = async (req, res) => {
         architecture,
         tags,
         isPaid,
+        copyrighted, // Add copyrighted field
         price,
         downloadLink,
         size,
         category,
         systemRequirements,
-        gameMode, // Add gameMode
-        releaseYear // Add releaseYear
+        gameMode,
+        releaseYear
     } = req.body;
 
     try {
@@ -140,6 +152,7 @@ const createApp = async (req, res) => {
 
         // Parse size string to KB for filtering/sorting
         const sizeValue = parseSizeToKB(size) || 0;
+
         // Create new app with all fields
         const newApp = await App.create({
             title,
@@ -148,6 +161,7 @@ const createApp = async (req, res) => {
             architecture: architecture || "Native",
             tags: tagsArray,
             isPaid,
+            copyrighted: copyrighted || false, // Add copyrighted field
             price,
             downloadLink,
             size,
@@ -155,10 +169,9 @@ const createApp = async (req, res) => {
             thumbnail: thumbnailUrls,
             category: categoryObj._id,
             systemRequirements: systemRequirements ? JSON.parse(systemRequirements) : {},
-            gameMode, // Add gameMode
-            releaseYear, // Add releaseYear
+            gameMode,
+            releaseYear,
             sortMetrics: {
-                ...((typeof sortMetrics === 'object' && sortMetrics) || {}),
                 sizeValue,
                 releaseDate: new Date(),
                 relevanceScore: 0 // Will be calculated later
@@ -216,7 +229,7 @@ const getAllApps = async (req, res) => {
         if (releaseYear) {
             query.releaseYear = Number(releaseYear);
         }
-        // FIX: Place sizeLimit filter here so it is included in the DB query
+        // Size limit filter
         if (sizeLimit && sizeRangeMap[sizeLimit]) {
             query['sortMetrics.sizeValue'] = {
                 $gte: sizeRangeMap[sizeLimit][0],
@@ -282,9 +295,12 @@ const getAllApps = async (req, res) => {
         // Process apps to remove download links for unauthorized users
         const processedApps = apps.map(app => {
             const appData = app.toObject ? app.toObject() : app;
-            if (appData.isPaid) {
+
+            // Hide download links for paid OR copyrighted apps from unauthorized users
+            if ((appData.isPaid || appData.copyrighted) && !canDownload(req.user, app)) {
                 delete appData.downloadLink;
             }
+
             return appData;
         });
 
@@ -312,7 +328,7 @@ const getAppsByCategory = async (req, res) => {
         platform,
         architecture,
         tags,
-        sizeRange, // NEW: size range filter
+        sizeRange,
         sortBy = 'newest'
     } = req.query;
 
@@ -332,10 +348,10 @@ const getAppsByCategory = async (req, res) => {
         if (platform) query.platform = platform;
         if (architecture) query.architecture = architecture;
         if (tags) query.tags = { $in: tags.split(',') };
-        if (releaseYear) query.releaseYear = Number(releaseYear); // ✅ filter by year
+        if (releaseYear) query.releaseYear = Number(releaseYear);
         if (gameMode) query.gameMode = gameMode;
 
-        // NEW: Size range filtering
+        // Size range filtering
         if (sizeRange) {
             const sizeInMB = {
                 '5-10': [5 * 1024, 10 * 1024],
@@ -417,14 +433,13 @@ const getAppsByCategory = async (req, res) => {
         const processedApps = apps.map(app => {
             const appData = app.toObject();
 
-            if (appData.isPaid) {
-                // Hide paid apps completely in public route OR hide downloadLink only
+            // Hide download links for paid OR copyrighted apps from unauthorized users
+            if ((appData.isPaid || appData.copyrighted) && !canDownload(req.user, app)) {
                 delete appData.downloadLink;
             }
 
             return appData;
         });
-
 
         res.status(200).json({
             apps: processedApps,
@@ -449,13 +464,14 @@ const updateApp = async (req, res) => {
         architecture,
         tags,
         isPaid,
+        copyrighted, // Add copyrighted field
         price,
         downloadLink,
         size,
         category,
         systemRequirements,
-        gameMode, // NEW: support updating gameMode
-        releaseYear // NEW: support updating releaseYear
+        gameMode,
+        releaseYear
     } = req.body;
 
     try {
@@ -476,6 +492,7 @@ const updateApp = async (req, res) => {
             }
         }
         if (isPaid !== undefined) updateData.isPaid = isPaid;
+        if (copyrighted !== undefined) updateData.copyrighted = copyrighted; // Add copyrighted
         if (price) updateData.price = price;
         // Download Links: support array or string
         if (downloadLink) {
@@ -487,7 +504,6 @@ const updateApp = async (req, res) => {
         }
         if (size) {
             updateData.size = size;
-            // Do NOT set updateData.sortMetrics = {} here!
             updateData['sortMetrics.sizeValue'] = parseSizeToKB(size) || 0;
         }
         // System Requirements: support object or string
@@ -598,10 +614,10 @@ const getAppById = async (req, res) => {
         // Convert to plain object and handle download link
         const appData = app.toObject();
 
-        if (appData.isPaid) {
+        // Hide download links for paid OR copyrighted apps from unauthorized users
+        if ((appData.isPaid || appData.copyrighted) && !canDownload(req.user, app)) {
             delete appData.downloadLink;
         }
-
 
         res.status(200).json({
             app: appData,
@@ -615,8 +631,7 @@ const getAppById = async (req, res) => {
     }
 };
 
-
-
+// --- Get paid app access (protected route) ---
 const getPaidAppAccess = async (req, res) => {
     const { id } = req.params;
     const user = req.user;
@@ -641,7 +656,7 @@ const getPaidAppAccess = async (req, res) => {
             });
         }
 
-        const hasAccess = canDownload(user, app._id);
+        const hasAccess = canDownload(user, app);
         if (!hasAccess) {
             return res.status(403).json({
                 message: "You need to purchase this app to access it.",
@@ -657,6 +672,52 @@ const getPaidAppAccess = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             message: "Error accessing paid app: " + error.message,
+            success: false
+        });
+    }
+};
+
+// --- Get copyrighted app access (protected route) ---
+const getCopyrightedAppAccess = async (req, res) => {
+    const { id } = req.params;
+    const user = req.user;
+
+    try {
+        const app = await App.findById(id)
+            .populate('category', 'name')
+            .populate('reviews.userId', 'username avatar');
+
+        if (!app) {
+            return res.status(404).json({
+                message: "App not found",
+                success: false
+            });
+        }
+
+        // If app is not copyrighted, send from public route
+        if (!app.copyrighted) {
+            return res.status(400).json({
+                message: "This app is not copyrighted. Access it from the public route.",
+                success: false
+            });
+        }
+
+        // Check if user is authenticated
+        if (!user) {
+            return res.status(401).json({
+                message: "You need to be logged in to access copyrighted apps",
+                success: false
+            });
+        }
+
+        res.status(200).json({
+            app,
+            success: true
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: "Error accessing copyrighted app: " + error.message,
             success: false
         });
     }
@@ -728,5 +789,6 @@ module.exports = {
     getAppById,
     deleteApp,
     recordDownload,
-    getPaidAppAccess
+    getPaidAppAccess,
+    getCopyrightedAppAccess
 };
