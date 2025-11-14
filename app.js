@@ -21,8 +21,8 @@ app.use(cors({
     origin: [
         'http://localhost:5173',
         'http://localhost:3000',
-        'https://toxicgames.in',
-        'http://toxicgames.in'
+        'https://toxicgame.net',
+        'http://toxicgame.net'
     ],
     credentials: true,
 }));

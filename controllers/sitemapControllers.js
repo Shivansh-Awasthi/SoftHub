@@ -4,7 +4,7 @@ const getSitemap = async (req, res) => {
     try {
         const protocol = req.protocol;
         const host = req.get('host');
-        const baseUrl = process.env.BASE_URL || 'https://toxicgames.in';
+        const baseUrl = process.env.BASE_URL || 'https://toxicgame.net';
 
         const sitemapStream = await generateSitemap(baseUrl);
 
